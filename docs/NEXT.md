@@ -1,11 +1,11 @@
 # Next (ranked)
-1. Real job footage from Aron (one driveway, one house wash) → full renders through the app, judge against the agency bar, tune timings/type.
-2. Deploy decision (see NEEDS_ARON #2). If GitHub Actions: workflow that renders a job from a bucket/artifact; if a paid Render worker: Dockerfile (ffmpeg + Chromium + Python) + render.yaml. Prepare the Dockerfile either way.
-3. VO + word-timed captions: ElevenLabs `with-timestamps` → caption track only where on-screen text doesn't already say it. Needs key + credit OK.
-4. Upload robustness: uploads already stream to disk; next is resume after a dropped connection, direct-to-bucket once a bucket exists, and client-side checks (duration, orientation) before upload using the same rules as ingest.
-5. Better hero detection for text placement (detail/edge stability + motion) and apply to hook + tags.
-6. Square 1:1 and 4:5 variants (layout, not crop) offered on the job page.
-7. Postgres job store behind the same interface (`web/lib/store.ts` + worker) once deployed.
-8. Guided camera PWA: ghost overlay of the before photo, shot list per job type, level/light checks.
-9. Quote page per business with tracked links (?r=<reelId>) + Google Business post and review-request texts.
-10. More templates: roof soft wash, deck/patio, window cleaning.
+1. Online beta on free infrastructure: web on Render free + jobs rendered by GitHub Actions (workflow_dispatch per job) with footage/results stored as Actions artifacts or in the repo's releases until a bucket exists. Design the hand-off so a bucket drops in later.
+2. Judge the VO reels as a viewer: timing of each line against cuts, ducking feel, caption size; tune. Consider a short VO line during the driveway reveal instead of silence.
+3. More CC-licensed real test footage (Commons, throttled) so every run sees real pixels; build a small fixed test set + golden contact sheets to catch visual regressions.
+4. Per-job VO with business name/area once a product API key exists (template lines with {business}); until then stock takes.
+5. Upload robustness: resume after dropped connections; client-side checks (duration, orientation) before upload using ingest's rules.
+6. Better hero detection for text placement (detail/edge stability + motion) applied to hook + tags.
+7. Square 1:1 and 4:5 variants (layout, not crop) on the job page.
+8. Third template: roof soft wash or window cleaning (with its own stock VO take, within budget).
+9. Guided camera PWA: ghost overlay of the before photo, shot list, level/light checks.
+10. Quote page per business with tracked links (?r=<reelId>) + Google Business post / review-request texts.

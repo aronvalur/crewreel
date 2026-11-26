@@ -42,3 +42,13 @@
 - Tests: 23 → 31, all green.
 - Self-check: chose app skeleton over captions/VO again because VO is blocked on a key and the end-to-end flow is the next biggest gap; kept the store file-based to avoid needing any account.
 - Grade: C+ (up from C). A contractor can now go from clips to a postable reel with caption in one flow, locally. Not deployed, no VO, no real customer footage yet.
+
+## 2026-11-26 — run 6 (daytime; Aron: "be independent, make the decisions yourself")
+- Recorded the rule in `docs/DECISIONS.md` and updated the nightly task's prompt to follow it. Decided every open item: render host = GitHub Actions; voice = ElevenLabs "Blain – Conversational Ad Voice"; ElevenLabs budget ≤400 chars/run and only while >8,000 remain (protects Aron's daily Short); stock VO per template; mix targets.
+- Shipped real voiceover: one take per template (335 credits total, cached in `assets/vo/`), split on its pauses, each line placed at its template time, every word timed from the audio (phrase/pause-aware). Worker uses the stock take automatically.
+- Shipped word-timed captions (`_lib/captions.js`) for VO lines no on-screen text carries (driveway: "Same morning.").
+- Fixed the mix (found while measuring the first VO render): echo was applied to the whole mix including the voice; levels weren't set relative to the voice; output was −17.5 LUFS. Now voice −18 dBFS, bed ~15 dB under speech with smooth ducking, echo on music/fx only, look-ahead limiter + measured gain → −14.2 LUFS, true peak −1.6 to −1.8.
+- Shipped CI (`ci.yml`: web build + full pytest) and `render-samples` (renders both templates with VO on GitHub's free runners, attaches reels + contact sheets).
+- Tests: 31 → 34.
+- Self-check: wanted per-job VO with the business name, but that needs a product API key (account action); stock VO with generic lines gets 90 % of the value for free today.
+- Grade: B− (up from C+). Reels now have a real voice, captions and a broadcast-level mix; the app flow works locally; CI renders on free infrastructure. Still not deployed online; no real customer footage.
