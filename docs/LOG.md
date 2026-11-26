@@ -31,3 +31,13 @@
 - Tests: 7 → 23, all green. Render: 15 s reel ≈ 155 s on CPU (ingest + stabilise added ~40 s).
 - Self-check notes that changed direction: (a) ~40 min: planned captions first, but the templates are text-driven, so captions add little until VO exists; real-footage robustness was the bigger unknown → switched. (b) first plate-avoidance version used motion only and still covered the nozzle (tool is static relative to camera, spray mist dominates motion) → added centre prior and flipped the default zone. (c) first seam test used phase correlation across dirty/clean pavers and aliased on the repeating grid → measured each take against itself instead, and made placeholder takes wobble independently (they shared one wobble, which hid the bug).
 - Grade: C (up from C−). The pipeline now survives real phone footage and the reveal holds registration; still no customer footage, no VO voice, no app.
+
+## 2026-11-26 — run 5 (daytime, started by Aron: "keep going, not only at night")
+- Shipped render speed-up: overlay frames whose DOM is unchanged reuse the previous PNG (220/450 on driveway), CDP fast capture, compositor decodes each overlay once and blends only rows with graphics. 15 s reel 159 s → 91 s on 2 cores, PSNR 64 dB vs old path.
+- Shipped the core job → reel flow: `web/` (Next 15) with Business profile, New reel (style, footage slots with crew shot guidance + previews, optional words, upload progress), job page (polls, then reel + download + ready-to-paste caption + "For next time" re-shoot tips), reels grid with mid-reveal posters. `worker/worker.py` claims queued jobs and renders them. File-based job store so it runs with zero accounts.
+- Verified end to end in an iPhone-sized browser with the real Commons clip: setup → upload 3 clips → reel in 115 s, tips shown ("low resolution", "filmed sideways").
+- Fixed from looking at the screens: poster grabbed while the divider was still far left (now split at 50 %); caption read awkwardly and dropped the method line when blank; one giant card per row on phones (now 2 columns); video streaming threw an uncaught "Controller is already closed" on aborted range requests (custom stream with cancel).
+- Found: Render's free tier (0.1 CPU, 512 MB) cannot run the render worker (Chromium + 1080×1920 float frames; a reel would take 30+ min if it fit at all). Added to NEEDS_ARON as a decision.
+- Tests: 23 → 30, all green.
+- Self-check: chose app skeleton over captions/VO again because VO is blocked on a key and the end-to-end flow is the next biggest gap; kept the store file-based to avoid needing any account.
+- Grade: C+ (up from C). A contractor can now go from clips to a postable reel with caption in one flow, locally. Not deployed, no VO, no real customer footage yet.
