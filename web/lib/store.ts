@@ -9,7 +9,7 @@ import crypto from "crypto";
 
 export const DATA = path.resolve(process.env.CREWREEL_DATA || path.join(process.cwd(), "..", "data"));
 
-export type JobStatus = "queued" | "rendering" | "done" | "failed";
+export type JobStatus = "draft" | "queued" | "rendering" | "done" | "failed";
 export type Hint = { code: string; message: string };
 
 export type Job = {
@@ -75,7 +75,7 @@ export async function listJobs(): Promise<Job[]> {
   let ids: string[] = [];
   try { ids = await fs.readdir(jobsDir()); } catch { return []; }
   const jobs = await Promise.all(ids.filter(i => /^[a-z0-9-]{6,40}$/.test(i)).map(getJob));
-  return (jobs.filter(Boolean) as Job[]).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return (jobs.filter(j => j && j.status !== "draft") as Job[]).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export async function getProfile(): Promise<Profile> {

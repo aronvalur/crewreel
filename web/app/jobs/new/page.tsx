@@ -41,28 +41,52 @@ export default function NewReel() {
   const tpl = TEMPLATES.find(t => t.id === tplId)!;
   const missing = tpl.slots.filter(s => !s.optional && !files[s.name]);
 
-  function submit(e: React.FormEvent) {
+  // Clips stream one by one to disk (PUT), so big 4K phone files never sit in server memory.
+  // XHR (not fetch) so the crew sees upload progress: site signal is often bad.
+  function put(url: string, file: File, onProgress: (loaded: number) => void) {
+    return new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("PUT", url);
+      xhr.upload.onprogress = ev => onProgress(ev.loaded);
+      xhr.onload = () => {
+        if (xhr.status < 300) return resolve();
+        let msg = "Upload failed. Try again.";
+        try { msg = JSON.parse(xhr.responseText).error || msg; } catch { /* keep default */ }
+        reject(new Error(msg));
+      };
+      xhr.onerror = () => reject(new Error("Upload failed. Check your connection and try again."));
+      xhr.send(file);
+    });
+  }
+
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (missing.length) return setError(`Still missing: ${missing.map(s => s.label).join(", ")}.`);
     setError("");
-    const fd = new FormData();
-    fd.set("template", tpl.id);
-    fd.set("title", title);
-    for (const f of tpl.fields) if (text[f.name]) fd.set(f.name, text[f.name]);
-    for (const s of tpl.slots) if (files[s.name]) fd.set(s.name, files[s.name]!);
-    // XHR (not fetch) so the crew sees upload progress: phone clips are big and site signal is bad.
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/api/jobs");
-    xhr.upload.onprogress = ev => ev.lengthComputable && setProgress(ev.loaded / ev.total);
-    xhr.onload = () => {
-      let body: { id?: string; error?: string } = {};
-      try { body = JSON.parse(xhr.responseText); } catch { /* ignore */ }
-      if (xhr.status === 201 && body.id) router.push(`/jobs/${body.id}`);
-      else { setProgress(null); setError(body.error || "Upload failed. Try again."); }
-    };
-    xhr.onerror = () => { setProgress(null); setError("Upload failed. Check your connection and try again."); };
     setProgress(0);
-    xhr.send(fd);
+    try {
+      const d = await fetch("/api/drafts", { method: "POST" });
+      if (!d.ok) throw new Error("Couldn't start the upload. Try again.");
+      const { id } = await d.json();
+      const todo = tpl.slots.filter(s => files[s.name]).map(s => ({ slot: s, file: files[s.name]! }));
+      const total = todo.reduce((n, t) => n + t.file.size, 0) || 1;
+      let done = 0;
+      for (const t of todo) {
+        await put(`/api/drafts/${id}/${t.slot.name}?name=${encodeURIComponent(t.file.name)}`, t.file,
+          loaded => setProgress((done + loaded) / total));
+        done += t.file.size;
+      }
+      const r = await fetch("/api/jobs", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ draft: id, template: tpl.id, title, fields: text }),
+      });
+      const body = await r.json().catch(() => ({}));
+      if (r.status !== 201) throw new Error(body.error || "Couldn't start the render. Try again.");
+      router.push(`/jobs/${id}`);
+    } catch (err) {
+      setProgress(null);
+      setError((err as Error).message);
+    }
   }
 
   return (

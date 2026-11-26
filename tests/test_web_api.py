@@ -1,5 +1,5 @@
 """Web API contract (needs a production build: cd web && npx next build). Starts its own server."""
-import json, os, socket, subprocess, time, urllib.request, urllib.error, uuid
+import json, os, socket, subprocess, time, urllib.request, urllib.error
 import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -23,19 +23,13 @@ def server(tmp_path_factory):
     p.terminate(); p.wait()
 
 
-def post(base, fields, files):
-    b = uuid.uuid4().hex
-    body = b""
-    for k, v in fields.items():
-        body += f'--{b}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n'.encode()
-    for k, (name, data) in files.items():
-        body += f'--{b}\r\nContent-Disposition: form-data; name="{k}"; filename="{name}"\r\nContent-Type: application/octet-stream\r\n\r\n'.encode() + data + b"\r\n"
-    body += f"--{b}--\r\n".encode()
-    req = urllib.request.Request(base + "/api/jobs", body, {"Content-Type": f"multipart/form-data; boundary={b}"})
+def call(base, method, path, body=None, ctype="application/json"):
+    data = json.dumps(body).encode() if isinstance(body, dict) else body
+    req = urllib.request.Request(base + path, data, {"Content-Type": ctype} if data is not None else {}, method=method)
     try:
-        r = urllib.request.urlopen(req); return r.status, json.loads(r.read())
+        r = urllib.request.urlopen(req); return r.status, json.loads(r.read() or b"{}")
     except urllib.error.HTTPError as e:
-        return e.code, json.loads(e.read())
+        return e.code, json.loads(e.read() or b"{}")
 
 
 def get(base, path):
@@ -45,27 +39,61 @@ def get(base, path):
         return e.code
 
 
+def draft(base):
+    code, body = call(base, "POST", "/api/drafts")
+    assert code == 201
+    return body["id"]
+
+
+def put(base, jid, slot, name, data):
+    return call(base, "PUT", f"/api/drafts/{jid}/{slot}?name={name}", data, "application/octet-stream")
+
+
 def test_rejects_missing_clips_with_plain_message(server):
     base, _ = server
-    code, body = post(base, {"template": "driveway"}, {"before": ("b.mp4", b"x" * 10)})
+    jid = draft(base)
+    assert put(base, jid, "before", "b.mp4", b"x" * 10)[0] == 200
+    code, body = call(base, "POST", "/api/jobs", {"draft": jid, "template": "driveway"})
     assert code == 400 and body["error"] == "Still missing: Cleaning, After."
 
 
-def test_rejects_photo_for_video_slot(server):
+def test_rejects_photo_for_video_slot_and_unknown_types(server):
     base, _ = server
-    code, body = post(base, {"template": "driveway"}, {"before": ("b.jpg", b"x"), "action1": ("a.jpg", b"x"), "after": ("c.jpg", b"x")})
+    jid = draft(base)
+    for slot, name in (("before", "b.jpg"), ("action1", "a.jpg"), ("after", "c.jpg")):
+        assert put(base, jid, slot, name, b"x")[0] == 200
+    code, body = call(base, "POST", "/api/jobs", {"draft": jid, "template": "driveway"})
     assert code == 400 and "Cleaning" in body["error"]
+    assert put(base, jid, "before", "evil.sh", b"x")[0] == 400
+    assert put(base, jid, "nope", "a.mp4", b"x")[0] == 400
 
 
-def test_creates_queued_job(server):
+def test_streams_upload_and_queues_job(server):
     base, data = server
-    code, body = post(base, {"template": "driveway", "title": "Drive", "hook": "Clean\r\n*now*"},
-                      {"before": ("b.JPG", b"x"), "action1": ("a.MOV", b"x"), "after": ("c.mp4", b"x")})
+    jid = draft(base)
+    big = os.urandom(20 * 1024 * 1024)
+    assert put(base, jid, "before", "b.JPG", b"x")[0] == 200
+    assert put(base, jid, "action1", "a.MOV", big)[1]["bytes"] == len(big)
+    assert put(base, jid, "after", "c.mp4", b"x")[0] == 200
+    assert put(base, jid, "after", "c2.mov", b"yy")[0] == 200            # re-pick replaces the old clip
+    code, body = call(base, "POST", "/api/jobs", {"draft": jid, "template": "driveway", "title": "Drive",
+                                                  "fields": {"hook": "Clean\r\n*now*"}})
     assert code == 201
-    job = json.loads((data / "jobs" / body["id"] / "job.json").read_text())
-    assert job["status"] == "queued" and job["files"] == {"before": "before.jpg", "action1": "action1.mov", "after": "after.mp4"}
+    d = data / "jobs" / jid
+    job = json.loads((d / "job.json").read_text())
+    assert job["status"] == "queued" and job["files"] == {"before": "before.jpg", "action1": "action1.mov", "after": "after.mov"}
     assert job["params"]["hook"] == "Clean\n*now*"
-    assert get(base, f"/api/jobs/{body['id']}") == 200
+    assert (d / "in" / "action1.mov").read_bytes() == big
+    assert not (d / "in" / "after.mp4").exists()
+    assert get(base, f"/api/jobs/{jid}") == 200
+    assert put(base, jid, "before", "b.jpg", b"x")[0] == 404              # no uploads into a queued job
+
+
+def test_drafts_are_hidden_from_the_reels_list(server):
+    base, _ = server
+    jid = draft(base)
+    r = urllib.request.urlopen(base + "/api/jobs")
+    assert jid not in [j["id"] for j in json.loads(r.read())]
 
 
 def test_files_route_only_serves_outputs(server):
