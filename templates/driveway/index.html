@@ -3,6 +3,7 @@
 <link rel="stylesheet" href="../_lib/base.css">
 <script src="../_lib/motion.js"></script>
 <script src="../_lib/endcard.js"></script>
+<script src="../_lib/captions.js"></script>
 <style>
   .tag{opacity:0}
   #tagB{left:64px} #tagA{right:64px}
@@ -25,7 +26,7 @@ const P = Object.assign({
   vo: [
     { at: 0.4, text: "Eight years of grime on this driveway." },
     { at: 3.4, text: "Surface cleaner, then a soft rinse. No harsh chemicals." },
-    { at: 8.6, text: "Same morning." },
+    { at: 8.6, text: "Same morning.", caption: true },   // only line not already on screen
     { at: 12.4, text: "Get your free quote at the link." }
   ]
 }, window.PARAMS || {});
@@ -37,6 +38,7 @@ const { $, prog, outExpo, inOutCubic, inOutSine, clamp, show } = M;
 const hookWords = M.words($("hook"), P.hook);
 $("plateK").textContent = P.methodLabel; $("plateV").textContent = P.method;
 EndCard.mount(P);
+Captions.mount();
 // keep the method plate off the action. Crews film the wand tip from behind, so the tool sits
 // centre/low: plate goes high by default, low only when the action is clearly up top (rooflines, gutters)
 window.relayout = () => {                // re-run after web fonts load (overlay.js calls it)
@@ -102,6 +104,7 @@ window.seek = function (t) {
     $("tagB").style.opacity = tagK * (1 - k); $("tagA").style.opacity = tagK * k;
   }
   $("scrim").style.opacity = t < T.reveal ? 1 : 0;
+  Captions.seek(t, P.voTiming, P.vo);
   EndCard.seek(t, T.reveal);
 };
 window.seek(0);

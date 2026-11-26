@@ -200,6 +200,17 @@ def first_frame(path):
     return c.frame(0)
 
 
+def template_meta(html, pfile):
+    """window.META of a template (with these params), without rendering any frames."""
+    js = ("const { chromium } = require('playwright');(async () => {const [h, p] = process.argv.slice(-2);"
+          "const b = await chromium.launch(); const pg = await b.newPage();"
+          "await pg.addInitScript(x => { window.PARAMS = x; }, JSON.parse(require('fs').readFileSync(p, 'utf8')));"
+          "await pg.goto('file://' + h); console.log(JSON.stringify(await pg.evaluate(() => window.META)));"
+          "await b.close(); })();")
+    out = subprocess.run(["node", "-e", js, os.path.abspath(html), pfile], capture_output=True, text=True, check=True, cwd=ROOT)
+    return json.loads(out.stdout)
+
+
 def find_clip(footage, name):
     for ext in (".mp4", ".mov", ".m4v", ".jpg", ".jpeg", ".png"):
         p = os.path.join(footage, name + ext)
@@ -216,6 +227,7 @@ def main():
     ap.add_argument("--params", default=None)
     ap.add_argument("--seconds", type=float, default=None)
     ap.add_argument("--keep", action="store_true")
+    ap.add_argument("--vo-take", default=None, help="one VO recording holding every template line, split on pauses")
     args = ap.parse_args()
     t0 = time.time()
     work = tempfile.mkdtemp(prefix="crewreel-")
@@ -245,6 +257,18 @@ def main():
     pfile = os.path.join(work, "params.json")
     json.dump(params, open(pfile, "w"))
     print(f"align: ok={al['ok']} score={al['score']:.2f} zoom={al['zoom']:.3f}")
+
+    # VO take: split per line and time every word BEFORE drawing, so captions can follow the voice
+    vo_clips = None
+    if args.vo_take:
+        meta0 = template_meta(os.path.join(args.template, "index.html"), pfile)
+        try:
+            timing, vo_clips = audio.take_timing(args.vo_take, meta0.get("vo", []))
+            params["voTiming"] = timing
+            json.dump(params, open(pfile, "w"))
+            print(f"vo: {len(timing)} lines timed from {os.path.basename(args.vo_take)}")
+        except ValueError as e:
+            print("vo: skipped,", e)
 
     # 1. overlay + plan
     cmd = ["node", os.path.join(ROOT, "render/overlay.js"), os.path.join(args.template, "index.html"), work, pfile]
@@ -295,7 +319,7 @@ def main():
 
     # 4. audio
     wav = os.path.join(work, "mix.wav")
-    audio.build_mix(plan["meta"], wav, work)
+    audio.build_mix(plan["meta"], wav, work, vo_clips=vo_clips)
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", silent, "-i", wav, "-c:v", "copy",
                     "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart", args.out], check=True)
     json.dump({k: {kk: vv for kk, vv in v.items() if kk != "activity"} for k, v in report.items()},

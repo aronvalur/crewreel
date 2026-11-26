@@ -101,6 +101,11 @@ def render(job):
            os.path.join(d, "in"), out, "--params", pfile]
     if os.environ.get("CREWREEL_MAX_SECONDS"):
         cmd += ["--seconds", os.environ["CREWREEL_MAX_SECONDS"]]
+    # Stock voiceover: template VO lines are generic (no business name), so one studio take per
+    # template serves every customer at no per-reel cost. Custom per-job VO comes with the API key.
+    take = os.path.join(ROOT, "assets", "vo", f"{job['template']}_blain.mp3")
+    if os.path.exists(take):
+        cmd += ["--vo-take", take]
     log = open(os.path.join(d, "render.log"), "w")
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=log, text=True, bufsize=1,
                             env={**os.environ, "PYTHONUNBUFFERED": "1"})
