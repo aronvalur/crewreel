@@ -16,6 +16,16 @@ Footage folder: `before`, `after`, `action1..3` (.mp4/.mov/.webm/.mkv or .jpg/.p
 HDR or SDR. Next to the reel the renderer writes `<out>.footage.json`: what ingest did per clip plus plain-English
 re-shoot hints for the crew (low res, too dark, washed out, sideways, too short).
 
+## Run the app (job → reel)
+```sh
+cd web && npm install && npx next build && npx next start      # http://localhost:3000
+python worker/worker.py                                          # second terminal: renders queued jobs
+```
+Contractor flow: Business (name, area, quote link, colour) → New reel (pick style, add clips with shot guidance,
+optional words; upload shows progress) → job page polls while rendering → reel, poster, ready-to-paste caption,
+and "For next time" re-shoot tips. Jobs live in `data/` (`CREWREEL_DATA`): plain folders + JSON, written atomically,
+claimed by the worker with an O_EXCL lock. Swap for Postgres + a bucket when it goes online.
+
 ## How a template works
 `templates/<name>/index.html` is a deterministic HTML composition (no timers, no CSS animation):
 - `window.META` — fps, duration, footage `sources`, `cuts` (whoosh), `impacts` (thump), `vo` lines.
