@@ -1,0 +1,46 @@
+# Render host (docs/DECISIONS.md): GitHub Actions. This workflow renders both templates from
+# placeholder footage with the stock voiceover and attaches the reels, so every change to the
+# render pipeline can be watched, not just tested. Later: render customer jobs from a bucket.
+name: render-samples
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["render/**", "templates/**", "assets/**", ".github/workflows/render.yml"]
+
+concurrency:
+  group: render-samples
+  cancel-in-progress: true
+
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - run: pip install -r requirements.txt
+      - run: npm install --no-audit --no-fund && npx playwright install --with-deps chromium
+      - name: Placeholder footage
+        run: |
+          python scripts/gen_placeholder.py pavers footage/driveway
+          python scripts/gen_placeholder.py siding footage/house
+      - name: Render
+        run: |
+          mkdir -p out
+          time python render/render.py templates/driveway footage/driveway out/driveway.mp4 --vo-take assets/vo/driveway_blain.mp3
+          time python render/render.py templates/house-wash footage/house out/house-wash.mp4 --vo-take assets/vo/house-wash_blain.mp3
+      - name: Contact sheet
+        run: |
+          for f in driveway house-wash; do
+            ffmpeg -loglevel error -y -i out/$f.mp4 -vf "fps=1/2,scale=270:-1,tile=8x1" -frames:v 1 out/$f-sheet.jpg
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sample-reels
+          path: out/*
+          retention-days: 14
