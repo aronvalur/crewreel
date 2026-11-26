@@ -49,6 +49,6 @@
 - Shipped word-timed captions (`_lib/captions.js`) for VO lines no on-screen text carries (driveway: "Same morning.").
 - Fixed the mix (found while measuring the first VO render): echo was applied to the whole mix including the voice; levels weren't set relative to the voice; output was −17.5 LUFS. Now voice −18 dBFS, bed ~15 dB under speech with smooth ducking, echo on music/fx only, look-ahead limiter + measured gain → −14.2 LUFS, true peak −1.6 to −1.8.
 - Shipped CI (`ci.yml`: web build + full pytest) and `render-samples` (renders both templates with VO on GitHub's free runners, attaches reels + contact sheets).
-- Tests: 31 → 34.
+- Tests: 31 → 34; CI green on GitHub Actions; render-samples produced both VO reels on the free runner in ~7 min.
 - Self-check: wanted per-job VO with the business name, but that needs a product API key (account action); stock VO with generic lines gets 90 % of the value for free today.
 - Grade: B− (up from C+). Reels now have a real voice, captions and a broadcast-level mix; the app flow works locally; CI renders on free infrastructure. Still not deployed online; no real customer footage.
