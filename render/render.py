@@ -169,14 +169,24 @@ def composite(frames_dir, plan, clips, out_path, fps):
     enc = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24",
                             "-s", f"{W}x{H}", "-r", str(fps), "-i", "-", "-c:v", "libx264", "-preset", "medium",
                             "-crf", "17", "-pix_fmt", "yuv420p", out_path], stdin=subprocess.PIPE)
+    ov_idx, ov = None, None
     for i, fp in enumerate(plan["frames"]):
         acc = np.zeros((H, W, 3), np.float32)
         for L in fp["layers"]:
             img, a = render_layer(L, clips)
             acc = acc * (1 - a) + img * a
-        o = np.asarray(Image.open(f"{frames_dir}/{i:04d}.png").convert("RGBA")).astype(np.float32)
-        oa = o[..., 3:] / 255.0
-        acc = acc * (1 - oa) + o[..., :3] * oa
+        j = fp.get("ov", i)
+        if j != ov_idx:                     # overlay changed: decode once, premultiply, cache
+            o = np.asarray(Image.open(f"{frames_dir}/{j:04d}.png").convert("RGBA")).astype(np.float32)
+            oa = o[..., 3:] / 255.0
+            ys = np.where(oa[..., 0].max(axis=1) > 0)[0]
+            # only blend the rows that actually carry graphics
+            ov = (ys[0], ys[-1] + 1, o[ys[0]:ys[-1] + 1, :, :3] * oa[ys[0]:ys[-1] + 1],
+                  1 - oa[ys[0]:ys[-1] + 1]) if len(ys) else None
+            ov_idx = j
+        if ov is not None:
+            y0, y1, rgb, inv = ov
+            acc[y0:y1] = acc[y0:y1] * inv + rgb
         enc.stdin.write(np.clip(acc, 0, 255).astype(np.uint8).tobytes())
     enc.stdin.close()
     enc.wait()

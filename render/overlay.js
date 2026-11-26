@@ -21,11 +21,23 @@ const path = require('path');
   const fps = meta.fps || 30;
   const total = secondsArg ? Math.min(Number(secondsArg), meta.duration) : meta.duration;
   const n = Math.round(fps * total);
+  // Fast transparent capture straight from CDP (Playwright's screenshot is ~25 % slower).
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setDefaultBackgroundColorOverride', { color: { r: 0, g: 0, b: 0, a: 0 } });
   const plans = [];
+  let prevSig = null, prevOv = -1, shots = 0;
   for (let i = 0; i < n; i++) {
-    plans.push(await page.evaluate(t => { window.seek(t); return window.__plan; }, i / fps));
-    await page.screenshot({ path: `${outDir}/${String(i).padStart(4, '0')}.png`, omitBackground: true });
+    // The overlay is a pure function of the DOM, so if the DOM didn't change the pixels didn't either:
+    // about half of a reel's frames are held text. Skip those screenshots and point at the last PNG.
+    const { plan, sig } = await page.evaluate(t => { window.seek(t); return { plan: window.__plan, sig: document.body.outerHTML }; }, i / fps);
+    if (sig !== prevSig) {
+      const { data } = await cdp.send('Page.captureScreenshot', { format: 'png', optimizeForSpeed: true });
+      fs.writeFileSync(`${outDir}/${String(i).padStart(4, '0')}.png`, Buffer.from(data, 'base64'));
+      prevSig = sig; prevOv = i; shots++;
+    }
+    plans.push({ ...plan, ov: prevOv });
   }
+  console.error(`overlay: ${shots}/${n} frames captured, ${n - shots} reused`);
   fs.writeFileSync(`${outDir}/plan.json`, JSON.stringify({ meta: { ...meta, fps, duration: total }, frames: plans }));
   await browser.close();
 })().catch(e => { console.error(e); process.exit(1); });
