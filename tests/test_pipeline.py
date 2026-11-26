@@ -70,9 +70,8 @@ def test_template_plan_is_deterministic(tmp_path, tpl, n):
       }});
       console.log(JSON.stringify(r)); await b.close();
     }})();"""
-    f = tmp_path / "t.js"
-    f.write_text(js)
-    r = json.loads(subprocess.run(["node", str(f)], capture_output=True, text=True, check=True, cwd=ROOT).stdout)
+    # node -e resolves require() from cwd (the repo), so it finds the repo's playwright in CI too
+    r = json.loads(subprocess.run(["node", "-e", js], capture_output=True, text=True, check=True, cwd=ROOT).stdout)
     assert r["plans"][1] == r["plans"][-1]
     assert len(r["meta"]["sources"]) == n
     for p in r["plans"]:
