@@ -7,6 +7,7 @@ Pipeline
                   (plan = which footage layers go underneath each frame)
   0. ingest.py    normalises every upload (HDR tonemap, rotation, EXIF, letterbox, landscape
                   -> action-following 9:16 crop) into 1080x1920 30 fps mezzanine clips
+  1b. stabilize.py locks before/after to their first frame (tripod look)
   2. align.py     lines up the after clip with the before clip (fallback: crossfade)
   3. composite    footage layers per plan + overlay -> x264
   4. audio.py     music bed, whooshes on cuts, optional ElevenLabs VO -> loudnorm -> mux
@@ -20,6 +21,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import align
 import audio
 import ingest
+import stabilize
 
 W, H = 1080, 1920
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -35,8 +37,9 @@ def probe_frames(path):
 class Clip:
     """Sequential reader with hold-last-frame. Scales to cover 1080x1920, optional warp + zoom."""
 
-    def __init__(self, path, fps, warp=None, zoom=1.0, speed=1.0):
+    def __init__(self, path, fps, warp=None, zoom=1.0, speed=1.0, stab=None):
         self.path, self.fps, self.warp, self.zoom, self.speed = path, fps, warp, zoom, speed
+        self.stab = stab or None              # per-frame lock to frame 0 (stabilize.track)
         self.is_image = path.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))
         self.n = 1 if self.is_image else max(1, probe_frames(path))
         self.proc, self.idx, self.cur, self.prev, self.cache = None, -1, None, None, {}
@@ -49,9 +52,13 @@ class Clip:
                                       "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE)
         self.idx, self.cur, self.prev = -1, None, None
 
-    def _post(self, f):
-        if self.warp is not None:
-            f = cv2.warpAffine(f, self.warp, (W, H), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REFLECT)
+    def _post(self, f, i=0):
+        warp = self.warp
+        if self.stab:
+            S = self.stab[min(i, len(self.stab) - 1)]
+            warp = stabilize.compose(warp, S) if warp is not None else S
+        if warp is not None:
+            f = cv2.warpAffine(f, warp, (W, H), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REFLECT)
         if self.zoom > 1.0001:
             cw, ch = int(W / self.zoom), int(H / self.zoom)
             x0, y0 = (W - cw) // 2, (H - ch) // 2
@@ -94,7 +101,7 @@ class Clip:
             f = (a * (1 - w) + b * w).astype(np.uint8) if a is not None else b.astype(np.uint8)
         else:
             f = self._seek(i)
-        f = self._post(f)
+        f = self._post(f, i)
         self.cache = {key: f}               # tiny cache: same frame reused by several layers
         return f
 
@@ -239,6 +246,18 @@ def main():
     print(f"overlay: {len(plan['frames'])} frames in {time.time() - t0:.0f}s")
 
     # 3. composite
+    # tripod lock: remove each clip's handheld drift so the split stays registered on every frame.
+    # before and after must share one crop zoom, or the registration breaks.
+    stabs, pair_zoom = {}, al["zoom"] if al["ok"] else 1.0
+    ident = np.eye(2, 3, dtype=np.float32)
+    for name in ("before", "after"):
+        p = find_clip(footage, name)
+        if p and name in plan["meta"]["sources"] and report.get(name, {}).get("kind") == "video":
+            stabs[name] = stabilize.track(p, seconds=needed_seconds(plan, name) + .5, fps=fps)
+            A = al.get(name) if al["ok"] and al.get(name) is not None else ident
+            pair_zoom = max([pair_zoom] + [align.crop_zoom_for(stabilize.compose(A, S), W, H) for S in stabs[name][::5]])
+    if stabs:
+        print(f"stabilise: {', '.join(stabs)} locked, shared zoom {pair_zoom:.3f}")
     clips = {}
     for name in plan["meta"]["sources"]:
         p = find_clip(footage, name)
@@ -246,6 +265,9 @@ def main():
             raise SystemExit(f"missing footage: {name} in {args.footage}")
         warp = al.get(name) if name in ("before", "after") and al["ok"] else None
         zoom = al["zoom"] if name in ("before", "after") and al["ok"] else 1.0
+        stab = stabs.get(name)
+        if name in stabs:
+            zoom = pair_zoom
         speed = 1.0
         if name in report and report[name]["kind"] == "video":
             have = report[name]["frames"] / fps
@@ -256,7 +278,7 @@ def main():
                     "Keep filming a little longer next time.")))
             if speed < 1:
                 print(f"{name}: clip is {have:.1f}s, slot needs {needed_seconds(plan, name):.1f}s -> {speed:.2f}x slow motion")
-        clips[name] = Clip(p, fps, warp, zoom, speed)
+        clips[name] = Clip(p, fps, warp, zoom, speed, stab)
     silent = os.path.join(work, "silent.mp4")
     composite(work, plan, clips, silent, fps)
     print(f"composite done at {time.time() - t0:.0f}s")

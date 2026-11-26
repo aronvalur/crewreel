@@ -66,12 +66,13 @@ def dirty(img, kind, m):
     return out
 
 
-def cam(canvas, t, dx=0, dy=0, rot=0.0):
-    """Handheld camera: slow drift + micro shake, crop W x H from the 2x canvas."""
+def cam(canvas, t, dx=0, dy=0, rot=0.0, ph=0.0):
+    """Handheld camera: slow drift + micro shake, crop W x H from the 2x canvas.
+    ph = phase offset, so separate takes (before vs after) wobble independently like real handheld."""
     h, w = canvas.shape[:2]
-    cx = w / 2 + dx + 6 * np.sin(t * 1.3) + 2 * np.sin(t * 7.1)
-    cy = h / 2 + dy + 5 * np.cos(t * 1.1) + 2 * np.cos(t * 6.3)
-    M = cv2.getRotationMatrix2D((cx, cy), rot + .25 * np.sin(t * .9), 1.0)
+    cx = w / 2 + dx + 6 * np.sin(t * 1.3 + ph) + 2 * np.sin(t * 7.1 + 2 * ph)
+    cy = h / 2 + dy + 5 * np.cos(t * 1.1 + 1.7 * ph) + 2 * np.cos(t * 6.3 + ph)
+    M = cv2.getRotationMatrix2D((cx, cy), rot + .25 * np.sin(t * .9 + ph), 1.0)
     M[0, 2] += W / 2 - cx
     M[1, 2] += H / 2 - cy
     return cv2.warpAffine(canvas, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
@@ -96,7 +97,7 @@ def main(kind, out):
     n = FPS * 5
     write(f"{out}/before.mp4", (cam(dirty_img, i / FPS) for i in range(n)))
     # after: tripod-less re-shoot, ~3% offset and 1.5 deg rotation
-    write(f"{out}/after.mp4", (cam(clean * 1.03, i / FPS, dx=28, dy=-22, rot=1.5) for i in range(n)))
+    write(f"{out}/after.mp4", (cam(clean * 1.03, i / FPS, dx=28, dy=-22, rot=1.5, ph=2.1) for i in range(n)))
     # action: a cleaned band sweeping across (surface cleaner / soft wash wand)
     hh, ww = clean.shape[:2]
     yy, xx = np.mgrid[0:hh, 0:ww].astype(np.float32)
