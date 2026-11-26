@@ -215,10 +215,39 @@ def ingest_video(src, out, max_seconds=None):
     return meta
 
 
+BINS = 24
+
+
+def activity_profile(mezz, fps=10):
+    """Where the action is in the finished 9:16 frame: motion energy per horizontal band.
+
+    Returns BINS floats (top->bottom, sum 1) plus the motion centroid (x, y in 0..1).
+    Templates use it to keep text off the subject (the nozzle, the spray, the swath).
+    Low-motion clips fall back to a flat profile (=no preference)."""
+    fr = [cv2.cvtColor(f, cv2.COLOR_RGB2GRAY).astype(np.float32) for f in decode(mezz, [], 135, 240, fps=fps)]
+    if len(fr) < 3:
+        return None
+    e = np.zeros((240, 135), np.float32)
+    for a, b in zip(fr, fr[1:]):
+        e += cv2.GaussianBlur(np.abs(b - a), (0, 0), 2)
+    e = np.maximum(e - np.percentile(e, 50), 0)           # ignore sensor noise / gentle handheld drift
+    tot = float(e.sum())
+    if tot < 1e-3:
+        return dict(profile=[1 / BINS] * BINS, cx=.5, cy=.5, strength=0.0)
+    rows = e.sum(1)
+    prof = rows.reshape(BINS, -1).sum(1) / tot
+    ys, xs = np.mgrid[0:240, 0:135]
+    return dict(profile=[round(float(p), 4) for p in prof],
+                cx=round(float((e * xs).sum() / tot / 135), 3), cy=round(float((e * ys).sum() / tot / 240), 3),
+                strength=round(float(tot / len(fr) / (240 * 135)), 3))
+
+
 def ingest(src, out, max_seconds=None):
     if src.lower().endswith(IMAGE_EXT):
         return ingest_image(src, out)
-    return ingest_video(src, out, max_seconds)
+    meta = ingest_video(src, out, max_seconds)
+    meta["activity"] = activity_profile(out)
+    return meta
 
 
 if __name__ == "__main__":

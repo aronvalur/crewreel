@@ -187,6 +187,7 @@ def main():
     b, a = find_clip(footage, "before"), find_clip(footage, "after")
     al = align.plan_alignment(first_frame(b), first_frame(a)) if b and a else dict(ok=False, zoom=1, score=0)
     params["aligned"] = bool(al["ok"])
+    params["activity"] = {k: v.get("activity") for k, v in report.items() if v.get("activity")}
     pfile = os.path.join(work, "params.json")
     json.dump(params, open(pfile, "w"))
     print(f"align: ok={al['ok']} score={al['score']:.2f} zoom={al['zoom']:.3f}")

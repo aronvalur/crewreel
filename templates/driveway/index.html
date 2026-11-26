@@ -37,6 +37,14 @@ const { $, prog, outExpo, inOutCubic, inOutSine, clamp, show } = M;
 const hookWords = M.words($("hook"), P.hook);
 $("plateK").textContent = P.methodLabel; $("plateV").textContent = P.method;
 EndCard.mount(P);
+// keep the method plate off the action. Crews film the wand tip from behind, so the tool sits
+// centre/low: plate goes high by default, low only when the action is clearly up top (rooflines, gutters)
+{
+  const ph = $("plate").offsetHeight;
+  const z = M.quietZone(M.activity(P, ["action1"]), [[330, 330 + ph], [1920 - 600 - ph, 1920 - 600]]);
+  if (z === 0) { $("plate").style.bottom = "auto"; $("plate").style.top = "330px"; }
+  window.PLATE_ZONE = z;
+}
 
 window.seek = function (t) {
   const layers = [];
@@ -68,7 +76,9 @@ window.seek = function (t) {
   // ---- graphics ----
   M.riseWords(hookWords, t, 0.25, { out: T.hook, outDur: .35 });
   $("hook").style.display = t < T.hook ? "block" : "none";
-  const pk = outExpo((t - T.hook - .35) / .55) * (1 - prog(t, T.action - .35, T.action));
+  // plate reads, then gets out of the way so the action clip can breathe
+  const plateOut = Math.min(T.action, T.hook + .35 + M.readTime(P.methodLabel + " " + P.method) + .4);
+  const pk = outExpo((t - T.hook - .35) / .55) * (1 - inOutSine(prog(t, plateOut - .4, plateOut)));
   $("plate").style.display = t >= T.hook && t < T.action ? "block" : "none";
   show($("plate"), pk, 28);
 

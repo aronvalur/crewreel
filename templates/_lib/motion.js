@@ -29,5 +29,30 @@ window.M = (() => {
     });
   };
   const show = (el, k, dy = 30) => { el.style.opacity = k; el.style.transform = `translateY(${(1 - k) * dy}px)`; };
-  return { clamp, outCubic, outExpo, inOutCubic, inOutSine, prog, lerp, $, esc, words, riseWords, show };
+  // Pick the text zone with the least on-screen action. profiles: per-clip activity
+  // profiles from ingest (BINS floats, top->bottom); zones: [[y0, y1], ...] in px.
+  // Zone 0 is the designed default; we only move if another zone is clearly quieter.
+  const quietZone = (profiles, zones, bias = .8) => {
+    const ps = profiles.filter(Boolean);
+    if (!ps.length) return 0;
+    // Motion alone misses the hero: the nozzle/wand is held steady relative to the camera.
+    // Operators frame the subject near the centre, so blend in a centre prior (y~0.55).
+    const n = ps[0].length, bh = 1920 / n;
+    const prior = Array.from({ length: n }, (_, i) => Math.exp(-.5 * (((i + .5) / n - .55) / .17) ** 2));
+    const ps_ = prior.reduce((a, b) => a + b, 0);
+    const energy = ([y0, y1]) => ps.reduce((s, p) => {
+      let e = 0;
+      for (let i = 0; i < n; i++)
+        e += (.35 * p[i] + .65 * prior[i] / ps_) * clamp((Math.min(y1, (i + 1) * bh) - Math.max(y0, i * bh)) / bh);
+      return s + e;
+    }, 0);
+    const es = zones.map(energy);
+    let best = 0;
+    es.forEach((e, i) => { if (e < es[best] * bias && e < es[best] - .04) best = i; });
+    return best;
+  };
+  // Seconds a viewer needs to read a line: 0.9 s + 0.28 s per word, at least 2.2 s.
+  const readTime = text => Math.max(2.2, .9 + .28 * String(text).trim().split(/\s+/).length);
+  const activity = (P, names) => names.map(n => (P.activity || {})[n] && P.activity[n].profile);
+  return { quietZone, activity, readTime, clamp, outCubic, outExpo, inOutCubic, inOutSine, prog, lerp, $, esc, words, riseWords, show };
 })();
