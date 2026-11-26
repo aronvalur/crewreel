@@ -18,3 +18,16 @@
 - Tests: 7 pytest (alignment recovery/rejection, halfway transform math, audio length, plan determinism for both templates, 2 s end-to-end render). All green.
 - Render time: 15 s reel ≈ 100 s, 20 s reel ≈ 135–155 s on CPU.
 - Grade: C− (up from D+): two templates render with aligned reveals and a real end card; still no real footage, no VO voice chosen, no app.
+
+## 2026-11-26 — run 4 (first run with push access; repo bootstrapped from the project mirror)
+- Bootstrapped aronvalur/crewreel from `claude/crewreel-repo/` in the project; all 7 existing tests green, pushed to main.
+- Self-review (rendered both templates, read frames): (1) nothing handled real phone footage — HDR, rotation, EXIF, landscape and letterboxed clips would come out grey, sideways or blindly centre-cropped; (2) before/after seam drifted during the reveal (align on frame 0 only); (3) no VO/captions (blocked on key).
+- Pulled a real CC BY clip from Wikimedia Commons (rotary nozzle on red pavers, 720p letterboxed with burned-in "Slow 40x" text) for internal testing only (gitignored, never in customer reels).
+- Shipped `render/ingest.py`: HDR (HLG/PQ) → SDR tonemap, rotation flag, EXIF photos, letterbox/pillarbox removal (flat-and-black test so deep shadows are never cropped), landscape → 9:16 crop that follows the action as a calm, speed-limited pan. On the Commons clip: bars and burned-in text gone, crop follows the spray.
+- Shipped subject-aware text: the real clip showed the method plate sitting on the nozzle (the hero). Ingest now records a per-clip vertical activity profile; templates pick the plate zone from motion + centre-subject prior (plate high by default on action shots, low only when action is up top), and the plate exits after reading time so the action breathes.
+- Shipped footage quality gate (crew-friendly re-shoot hints → `<out>.footage.json`) and blended slow-motion fill for clips shorter than their slot (no more frozen last frames).
+- Shipped `render/stabilize.py`: each before/after take locked to its own frame 0, composed with the alignment, one shared crop zoom. Measured handheld drift 29–30 px → <1 px; paver joints run straight across the divider for the whole reveal.
+- Bundled Inter Display (OFL) so type is identical on any render machine; plate re-measured after fonts load.
+- Tests: 7 → 23, all green. Render: 15 s reel ≈ 155 s on CPU (ingest + stabilise added ~40 s).
+- Self-check notes that changed direction: (a) ~40 min: planned captions first, but the templates are text-driven, so captions add little until VO exists; real-footage robustness was the bigger unknown → switched. (b) first plate-avoidance version used motion only and still covered the nozzle (tool is static relative to camera, spray mist dominates motion) → added centre prior and flipped the default zone. (c) first seam test used phase correlation across dirty/clean pavers and aliased on the repeating grid → measured each take against itself instead, and made placeholder takes wobble independently (they shared one wobble, which hid the bug).
+- Grade: C (up from C−). The pipeline now survives real phone footage and the reveal holds registration; still no customer footage, no VO voice, no app.
