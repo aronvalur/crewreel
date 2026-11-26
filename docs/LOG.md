@@ -38,6 +38,7 @@
 - Verified end to end in an iPhone-sized browser with the real Commons clip: setup → upload 3 clips → reel in 115 s, tips shown ("low resolution", "filmed sideways").
 - Fixed from looking at the screens: poster grabbed while the divider was still far left (now split at 50 %); caption read awkwardly and dropped the method line when blank; one giant card per row on phones (now 2 columns); video streaming threw an uncaught "Controller is already closed" on aborted range requests (custom stream with cancel).
 - Found: Render's free tier (0.1 CPU, 512 MB) cannot run the render worker (Chromium + 1080×1920 float frames; a reel would take 30+ min if it fit at all). Added to NEEDS_ARON as a decision.
-- Tests: 23 → 30, all green.
+- Then: uploads now stream per clip straight to disk (draft → PUT per clip → queue); server memory flat during a 300 MB upload; browser flow re-verified.
+- Tests: 23 → 31, all green.
 - Self-check: chose app skeleton over captions/VO again because VO is blocked on a key and the end-to-end flow is the next biggest gap; kept the store file-based to avoid needing any account.
 - Grade: C+ (up from C). A contractor can now go from clips to a postable reel with caption in one flow, locally. Not deployed, no VO, no real customer footage yet.
