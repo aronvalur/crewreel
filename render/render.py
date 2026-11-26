@@ -5,6 +5,8 @@
 Pipeline
   1. overlay.js   seeks the HTML template frame by frame -> transparent PNGs + plan.json
                   (plan = which footage layers go underneath each frame)
+  0. ingest.py    normalises every upload (HDR tonemap, rotation, EXIF, letterbox, landscape
+                  -> action-following 9:16 crop) into 1080x1920 30 fps mezzanine clips
   2. align.py     lines up the after clip with the before clip (fallback: crossfade)
   3. composite    footage layers per plan + overlay -> x264
   4. audio.py     music bed, whooshes on cuts, optional ElevenLabs VO -> loudnorm -> mux
@@ -17,6 +19,7 @@ from PIL import Image
 sys.path.insert(0, os.path.dirname(__file__))
 import align
 import audio
+import ingest
 
 W, H = 1080, 1920
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -166,8 +169,22 @@ def main():
     work = tempfile.mkdtemp(prefix="crewreel-")
     params = json.load(open(args.params)) if args.params else {}
 
+    # 0. ingest: every upload -> clean 1080x1920 SDR mezzanine
+    mezz = os.path.join(work, "mezz")
+    os.makedirs(mezz, exist_ok=True)
+    report = {}
+    for f in sorted(os.listdir(args.footage)):
+        name, ext = os.path.splitext(f)
+        if ext.lower() not in (".mp4", ".mov", ".m4v", ".webm", ".mkv") + ingest.IMAGE_EXT or name in report:
+            continue
+        out = os.path.join(mezz, name + (".png" if ext.lower() in ingest.IMAGE_EXT else ".mp4"))
+        report[name] = ingest.ingest(os.path.join(args.footage, f), out, max_seconds=30)
+        r = report[name]
+        print(f"ingest {f}: {r['kind']} hdr={r.get('hdr', False)} crop={r['crop']} pan={'yes' if r.get('pan') else 'no'}")
+    footage = mezz
+
     # 2. alignment first: the template needs to know whether a split reveal is possible
-    b, a = find_clip(args.footage, "before"), find_clip(args.footage, "after")
+    b, a = find_clip(footage, "before"), find_clip(footage, "after")
     al = align.plan_alignment(first_frame(b), first_frame(a)) if b and a else dict(ok=False, zoom=1, score=0)
     params["aligned"] = bool(al["ok"])
     pfile = os.path.join(work, "params.json")
@@ -186,7 +203,7 @@ def main():
     # 3. composite
     clips = {}
     for name in plan["meta"]["sources"]:
-        p = find_clip(args.footage, name)
+        p = find_clip(footage, name)
         if not p:
             raise SystemExit(f"missing footage: {name} in {args.footage}")
         warp = al.get(name) if name in ("before", "after") and al["ok"] else None
