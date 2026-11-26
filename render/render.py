@@ -35,11 +35,11 @@ def probe_frames(path):
 class Clip:
     """Sequential reader with hold-last-frame. Scales to cover 1080x1920, optional warp + zoom."""
 
-    def __init__(self, path, fps, warp=None, zoom=1.0):
-        self.path, self.fps, self.warp, self.zoom = path, fps, warp, zoom
+    def __init__(self, path, fps, warp=None, zoom=1.0, speed=1.0):
+        self.path, self.fps, self.warp, self.zoom, self.speed = path, fps, warp, zoom, speed
         self.is_image = path.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))
         self.n = 1 if self.is_image else max(1, probe_frames(path))
-        self.proc, self.idx, self.cur, self.cache = None, -1, None, {}
+        self.proc, self.idx, self.cur, self.prev, self.cache = None, -1, None, None, {}
 
     def _open(self):
         if self.proc:
@@ -47,7 +47,7 @@ class Clip:
         vf = f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={self.fps}"
         self.proc = subprocess.Popen(["ffmpeg", "-loglevel", "error", "-i", self.path, "-vf", vf,
                                       "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE)
-        self.idx = -1
+        self.idx, self.cur, self.prev = -1, None, None
 
     def _post(self, f):
         if self.warp is not None:
@@ -58,24 +58,59 @@ class Clip:
             f = cv2.resize(f[y0:y0 + ch, x0:x0 + cw], (W, H), interpolation=cv2.INTER_CUBIC)
         return f
 
-    def frame(self, t):
-        i = min(int(round(t * self.fps)), self.n - 1)
-        if self.is_image:
-            i = 0
-        if i in self.cache:
-            return self.cache[i]
-        if self.proc is None or i < self.idx:
+    def _seek(self, i):
+        """Advance the sequential reader to source frame i (held at the last frame)."""
+        i = min(i, self.n - 1)
+        if self.proc is None or i < self.idx - 1:
             self._open()
         while self.idx < i:
             b = self.proc.stdout.read(W * H * 3)
             if len(b) < W * H * 3:          # clip shorter than probed: hold last
-                self.n = self.idx + 1
+                self.n = max(1, self.idx + 1)
                 break
             self.idx += 1
-            self.cur = np.frombuffer(b, np.uint8).reshape(H, W, 3)
-        f = self._post(self.cur)
-        self.cache = {i: f}                 # tiny cache: same frame reused by several layers
+            self.prev, self.cur = self.cur, np.frombuffer(b, np.uint8).reshape(H, W, 3)
+        if i == self.idx - 1 and self.prev is not None:
+            return self.prev
+        return self.cur
+
+    def frame(self, t):
+        """Frame at template time t. speed < 1 = slow motion with frame blending, used when the
+        crew's clip is shorter than the template slot (a slowed clip beats a frozen one)."""
+        if self.is_image:
+            i, w = 0, 0.0
+        else:
+            x = max(0.0, t * self.speed * self.fps)
+            i, w = int(x), x - int(x)
+            if self.speed > .999:
+                i, w = int(round(t * self.fps)), 0.0
+        key = (i, round(w, 2))
+        if key in self.cache:
+            return self.cache[key]
+        if w > .05 and i + 1 < self.n:
+            a = self._seek(i)
+            a = a.astype(np.float32) if a is not None else None
+            b = self._seek(i + 1).astype(np.float32)
+            f = (a * (1 - w) + b * w).astype(np.uint8) if a is not None else b.astype(np.uint8)
+        else:
+            f = self._seek(i)
+        f = self._post(f)
+        self.cache = {key: f}               # tiny cache: same frame reused by several layers
         return f
+
+
+def needed_seconds(plan, name):
+    """Latest clip time a template asks of source `name` (how long the crew's clip must be)."""
+    ts = [L.get("t", 0) for fp in plan["frames"] for L in fp["layers"] if L.get("src") == name]
+    return max(ts) if ts else 0.0
+
+
+def clip_speed(available_s, needed_s, floor=.5):
+    """Playback speed so a short clip fills its slot; never slower than `floor` (0.5x still looks
+    like intentional slow motion; slower turns into a slideshow - then we hold the last frame)."""
+    if needed_s <= 0 or available_s >= needed_s:
+        return 1.0
+    return max(floor, available_s / needed_s)
 
 
 def transform(img, zoom=1.0, fx=.5, fy=.5):
@@ -181,6 +216,8 @@ def main():
         report[name] = ingest.ingest(os.path.join(args.footage, f), out, max_seconds=30)
         r = report[name]
         print(f"ingest {f}: {r['kind']} hdr={r.get('hdr', False)} crop={r['crop']} pan={'yes' if r.get('pan') else 'no'}")
+        for wmsg in r["warnings"]:
+            print(f"  ! {name}: {wmsg['message']}")
     footage = mezz
 
     # 2. alignment first: the template needs to know whether a split reveal is possible
@@ -209,7 +246,17 @@ def main():
             raise SystemExit(f"missing footage: {name} in {args.footage}")
         warp = al.get(name) if name in ("before", "after") and al["ok"] else None
         zoom = al["zoom"] if name in ("before", "after") and al["ok"] else 1.0
-        clips[name] = Clip(p, fps, warp, zoom)
+        speed = 1.0
+        if name in report and report[name]["kind"] == "video":
+            have = report[name]["frames"] / fps
+            speed = clip_speed(have, needed_seconds(plan, name))
+            if have < needed_seconds(plan, name) * .5:
+                report[name]["warnings"].append(dict(code="too_short", message=(
+                    f"This clip is {have:.0f} s; this reel needs about {needed_seconds(plan, name):.0f} s. "
+                    "Keep filming a little longer next time.")))
+            if speed < 1:
+                print(f"{name}: clip is {have:.1f}s, slot needs {needed_seconds(plan, name):.1f}s -> {speed:.2f}x slow motion")
+        clips[name] = Clip(p, fps, warp, zoom, speed)
     silent = os.path.join(work, "silent.mp4")
     composite(work, plan, clips, silent, fps)
     print(f"composite done at {time.time() - t0:.0f}s")
@@ -219,6 +266,8 @@ def main():
     audio.build_mix(plan["meta"], wav, work)
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", silent, "-i", wav, "-c:v", "copy",
                     "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart", args.out], check=True)
+    json.dump({k: {kk: vv for kk, vv in v.items() if kk != "activity"} for k, v in report.items()},
+              open(os.path.splitext(args.out)[0] + ".footage.json", "w"), indent=1)
     print(f"reel -> {args.out} in {time.time() - t0:.0f}s")
     if not args.keep:
         shutil.rmtree(work, ignore_errors=True)

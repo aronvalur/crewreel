@@ -103,3 +103,42 @@ def test_photo_exif_orientation(tmp_path):
     a = cv2.imread(str(out), cv2.IMREAD_GRAYSCALE).astype(np.float32)
     assert a.shape == (1920, 1080)
     assert a[:900].mean() > 180 and a[1020:].mean() < 70
+
+
+def test_quality_gate_flags_low_res_dark_clip(tmp_path):
+    src = tmp_path / "dim.mp4"                               # 240x426 night shot: dark but detailed
+    p = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "gray", "-s", "240x426",
+                          "-r", "30", "-i", "-", "-c:v", "libx264", "-pix_fmt", "yuv420p", str(src)], stdin=subprocess.PIPE)
+    rng = np.random.default_rng(4)
+    for i in range(30):
+        p.stdin.write(rng.integers(10, 40, (426, 240), dtype=np.uint8).tobytes())
+    p.stdin.close(); p.wait()
+    meta = ingest.ingest(str(src), str(tmp_path / "o.mp4"))
+    codes = {w["code"] for w in meta["warnings"]}
+    assert {"low_res", "too_dark"} <= codes
+
+
+def test_quality_gate_quiet_on_good_clip(tmp_path):
+    src = tmp_path / "ok.mp4"
+    ff("-f", "lavfi", "-i", "testsrc2=s=1080x1920:r=30:d=1", "-pix_fmt", "yuv420p", str(src))
+    assert ingest.ingest(str(src), str(tmp_path / "o.mp4"))["warnings"] == []
+
+
+def test_short_clip_plays_slow_instead_of_freezing(tmp_path):
+    import render
+    assert render.clip_speed(2.0, 4.0) == .5
+    assert render.clip_speed(1.0, 4.0) == .5          # floor: never a slideshow
+    assert render.clip_speed(5.0, 4.0) == 1.0
+    # a 1 s ramp clip played at 0.5x over 2 s keeps moving (no frozen second half) and blends frames
+    src = tmp_path / "ramp.mp4"
+    p = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "gray", "-s", "108x192",
+                          "-r", "30", "-i", "-", "-c:v", "libx264", "-crf", "0", "-pix_fmt", "yuv444p", str(src)],
+                         stdin=subprocess.PIPE)
+    for i in range(30):
+        p.stdin.write(np.full((192, 108), i * 8, np.uint8).tobytes())
+    p.stdin.close(); p.wait()
+    c = render.Clip(str(src), 30, speed=.5)
+    lum = [float(c.frame(t).mean()) for t in np.arange(0, 2, 1 / 30)]
+    assert all(b >= a - 1 for a, b in zip(lum, lum[1:]))   # monotonic: plays forward smoothly
+    assert lum[45] > lum[30] + 20                           # still moving in the second half
+    assert abs(lum[1] - (lum[0] + lum[2]) / 2) < 3          # in-between frame is a blend

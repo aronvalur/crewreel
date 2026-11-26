@@ -166,7 +166,8 @@ def ingest_image(src, out):
     ox = int(np.clip(cx - W / 2, 0, a.shape[1] - W))
     oy = (a.shape[0] - H) // 2
     Image.fromarray(np.ascontiguousarray(a[oy:oy + H, ox:ox + W])).save(out)
-    return dict(kind="image", src_size=[w, h], crop=[int(x0), int(y0), int(x1), int(y1)], pan=[float(cx)])
+    return dict(kind="image", src_size=[w, h], crop=[int(x0), int(y0), int(x1), int(y1)], pan=None,
+                src_px=round(min(w / W, h / H), 3))
 
 
 def ingest_video(src, out, max_seconds=None):
@@ -187,7 +188,9 @@ def ingest_video(src, out, max_seconds=None):
     cropped = (cx0, cy0, cw, ch) != (0, 0, info["width"] // 2 * 2, info["height"] // 2 * 2)
     pre = vf + ([f"crop={cw}:{ch}:{cx0}:{cy0}"] if cropped else [])
     aspect = cw / max(1, ch)
-    meta = dict(kind="video", hdr=info["hdr"], trc=info["trc"], rotation=info["rotation"],
+    # source pixels per output pixel after the crop (below ~0.55 the reel looks visibly soft)
+    src_px = ch / H if aspect > W / H * 1.03 else min(cw / W, ch / H)
+    meta = dict(kind="video", hdr=info["hdr"], trc=info["trc"], rotation=info["rotation"], src_px=round(src_px, 3),
                 src_size=[info["width"], info["height"]], crop=[cx0, cy0, cw, ch] if cropped else None,
                 duration=info["duration"])
     if aspect <= W / H * 1.03:
@@ -242,11 +245,32 @@ def activity_profile(mezz, fps=10):
                 strength=round(float(tot / len(fr) / (240 * 135)), 3))
 
 
+def quality_warnings(meta, sample):
+    """Plain-English re-shoot hints for the crew. sample: a few RGB frames of the source."""
+    w = []
+    if meta.get("src_px") is not None and meta["src_px"] < .55:
+        w.append(dict(code="low_res", message="This clip is low resolution and will look soft. "
+                      "Film in 1080p or 4K and hold the phone upright."))
+    luma = float(np.mean([cv2.cvtColor(f, cv2.COLOR_RGB2GRAY).mean() for f in sample]))
+    if luma < 45:
+        w.append(dict(code="too_dark", message="This clip is very dark. Film in daylight or turn on more light."))
+    elif luma > 225:
+        w.append(dict(code="overexposed", message="This clip is washed out. Tap the surface on screen to set exposure."))
+    if meta.get("pan") is not None:
+        w.append(dict(code="landscape", message="Filmed sideways: we cropped it to vertical and followed the action. "
+                      "Hold the phone upright next time to keep the whole shot."))
+    return w
+
+
 def ingest(src, out, max_seconds=None):
     if src.lower().endswith(IMAGE_EXT):
-        return ingest_image(src, out)
-    meta = ingest_video(src, out, max_seconds)
-    meta["activity"] = activity_profile(out)
+        meta = ingest_image(src, out)
+        sample = [cv2.cvtColor(cv2.imread(out), cv2.COLOR_BGR2RGB)]
+    else:
+        meta = ingest_video(src, out, max_seconds)
+        meta["activity"] = activity_profile(out)
+        sample = list(decode(out, [], 135, 240, fps=2))[:8]
+    meta["warnings"] = quality_warnings(meta, sample)
     return meta
 
 
