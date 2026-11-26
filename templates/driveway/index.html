@@ -39,12 +39,16 @@ $("plateK").textContent = P.methodLabel; $("plateV").textContent = P.method;
 EndCard.mount(P);
 // keep the method plate off the action. Crews film the wand tip from behind, so the tool sits
 // centre/low: plate goes high by default, low only when the action is clearly up top (rooflines, gutters)
-{
-  const ph = $("plate").offsetHeight;
+window.relayout = () => {                // re-run after web fonts load (overlay.js calls it)
+  const el = $("plate"), d = el.style.display;
+  el.style.display = "block"; el.style.top = ""; el.style.bottom = "";
+  const ph = el.offsetHeight;
   const z = M.quietZone(M.activity(P, ["action1"]), [[330, 330 + ph], [1920 - 600 - ph, 1920 - 600]]);
-  if (z === 0) { $("plate").style.bottom = "auto"; $("plate").style.top = "330px"; }
+  if (z === 0) { el.style.bottom = "auto"; el.style.top = "330px"; }
+  el.style.display = d;
   window.PLATE_ZONE = z;
-}
+};
+window.relayout();
 
 window.seek = function (t) {
   const layers = [];

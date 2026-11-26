@@ -1,7 +1,12 @@
 /* Crewreel template base. 1080x1920 canvas, transparent background (footage is composited underneath).
    Safe zones: keep text out of the top 300px and bottom 520px (IG/TikTok UI). */
+/* Fonts are bundled (Inter Display, SIL OFL) so every render machine sets identical type. */
+@font-face{font-family:"Crewreel Display";src:url("fonts/InterDisplay-Medium.otf") format("opentype");font-weight:500}
+@font-face{font-family:"Crewreel Display";src:url("fonts/InterDisplay-SemiBold.otf") format("opentype");font-weight:600}
+@font-face{font-family:"Crewreel Display";src:url("fonts/InterDisplay-Bold.otf") format("opentype");font-weight:700}
+@font-face{font-family:"Crewreel Display";src:url("fonts/InterDisplay-ExtraBold.otf") format("opentype");font-weight:800}
 html,body{margin:0;width:1080px;height:1920px;background:transparent;overflow:hidden}
-body{font-family:"Inter Display","Inter",sans-serif;color:#fff;-webkit-font-smoothing:antialiased;font-feature-settings:"ss01","cv11"}
+body{font-family:"Crewreel Display",sans-serif;color:#fff;-webkit-font-smoothing:antialiased;font-feature-settings:"ss01","cv11"}
 .layer{position:absolute;inset:0}
 .w{display:inline-block;will-change:transform}
 .acc{color:var(--accent)}

@@ -14,6 +14,7 @@ def run(tpl, params, t_list):
       const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1080, height: 1920 } });
       await p.addInitScript(x => { window.PARAMS = x; }, params);
       await p.goto('file://' + tpl);
+      await p.evaluate(async () => { await document.fonts.ready; window.relayout && window.relayout(); });
       const r = await p.evaluate(ts => {
         const el = document.getElementById('plate');
         const out = ts.map(t => { seek(t); const r = el.getBoundingClientRect();
@@ -57,3 +58,23 @@ def test_plate_leaves_after_reading_time():
     a, b = r["frames"]
     assert a["op"] > .95                     # readable early in the action segment
     assert b["op"] < .05                     # gone before the reveal so the action breathes
+
+
+@pytest.mark.parametrize("tpl", ["driveway", "house-wash"])
+def test_bundled_fonts_load(tpl):
+    """Type must come from the repo, not whatever the render machine has installed."""
+    js = """
+    const { chromium } = require('playwright');
+    (async () => {
+      const b = await chromium.launch(); const p = await b.newPage();
+      await p.goto('file://' + process.argv.at(-1));
+      await p.evaluate(() => document.fonts.ready);
+      const r = await p.evaluate(async () => {
+        await Promise.all(['500', '600', '700', '800'].map(w => document.fonts.load(w + ' 40px "Crewreel Display"')));
+        return [...document.fonts].filter(f => f.family.includes('Crewreel') && f.status === 'loaded').length;
+      });
+      console.log(r); await b.close();
+    })();"""
+    out = subprocess.run(["node", "-e", js, f"{ROOT}/templates/{tpl}/index.html"], capture_output=True, text=True,
+                         check=True, cwd=ROOT).stdout
+    assert int(out) == 4

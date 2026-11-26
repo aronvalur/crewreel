@@ -16,7 +16,7 @@ const path = require('path');
   const page = await browser.newPage({ viewport: { width: 1080, height: 1920 } });
   await page.addInitScript(p => { window.PARAMS = p; }, params);
   await page.goto('file://' + path.resolve(tpl));
-  await page.evaluate(() => document.fonts.ready);
+  await page.evaluate(async () => { await document.fonts.ready; if (window.relayout) window.relayout(); });
   const meta = await page.evaluate(() => window.META);
   const fps = meta.fps || 30;
   const total = secondsArg ? Math.min(Number(secondsArg), meta.duration) : meta.duration;
