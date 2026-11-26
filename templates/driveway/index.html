@@ -1,0 +1,94 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../_lib/base.css">
+<script src="../_lib/motion.js"></script>
+<script src="../_lib/endcard.js"></script>
+<style>
+  .tag{opacity:0}
+  #tagB{left:64px} #tagA{right:64px}
+</style>
+</head>
+<body>
+<div id="scrim" class="layer scrim"></div>
+<div id="hook" class="hook"></div>
+<div id="plate" class="plate"><div class="k" id="plateK"></div><div class="v" id="plateV"></div></div>
+<div id="tagB" class="tag">Before</div><div id="tagA" class="tag">After</div>
+<div id="divider" class="divider"><div class="handle"><svg viewBox="0 0 44 44" fill="none" stroke="#0b0e10" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 13l-8 9 8 9M27 13l8 9-8 9"/></svg></div></div>
+<script>
+// Template 1 — "Driveway Before/After" (9:16, 15 s)
+// 0–3 s hook over before (push-in) · 3–8 s action clip + method plate · 8–12 s split reveal · 12–15 s end card
+const P = Object.assign({
+  accent: "#7FD1FF", business: "Valur Exterior Cleaning", initials: "V", area: "Reykjavík & Kópavogur",
+  url: "crewreel.app/q/valur", hook: "8 years of grime.\n*Gone* in one morning.",
+  methodLabel: "The method", method: "Surface clean + soft rinse. No harsh chemicals.",
+  aligned: true,
+  vo: [
+    { at: 0.4, text: "Eight years of grime on this driveway." },
+    { at: 3.4, text: "Surface cleaner, then a soft rinse. No harsh chemicals." },
+    { at: 8.6, text: "Same morning." },
+    { at: 12.4, text: "Get your free quote at the link." }
+  ]
+}, window.PARAMS || {});
+const T = { hook: 3.0, action: 8.0, reveal: 12.0, total: 15.0 };
+window.META = { fps: 30, duration: T.total, sources: ["before", "after", "action1"],
+  cuts: [T.hook, T.action, T.reveal], impacts: [T.action + 0.05], vo: P.vo };
+document.documentElement.style.setProperty("--accent", P.accent);
+const { $, prog, outExpo, inOutCubic, inOutSine, clamp, show } = M;
+const hookWords = M.words($("hook"), P.hook);
+$("plateK").textContent = P.methodLabel; $("plateV").textContent = P.method;
+EndCard.mount(P);
+
+window.seek = function (t) {
+  const layers = [];
+  // ---- footage plan ----
+  if (t < T.hook) {
+    layers.push({ src: "before", t, zoom: 1 + 0.08 * inOutSine(t / T.hook), fy: .6 });
+  } else if (t < T.action) {
+    layers.push({ src: "action1", t: t - T.hook + 0.2, zoom: 1.04 });
+  } else if (t < T.reveal) {
+    const r = prog(t, T.action, T.reveal);
+    if (P.aligned) {
+      // divider: enters from the right, sweeps to 12 %, settles at 50 %
+      const x = r < .5 ? 1 - inOutCubic(r / .5) * .88 : .12 + inOutCubic((r - .5) / .4) * .38;
+      window.__x = x;
+      layers.push({ src: "before", t: 1.5 + (t - T.action) * .5, zoom: 1.02 });
+      layers.push({ src: "after", t: 1.5 + (t - T.action) * .5, zoom: 1.02, mask: [x, 1] });
+    } else {
+      // no reliable alignment: soft crossfade instead of a split that would look wrong
+      const k = inOutSine(prog(t, T.action + .6, T.action + 1.8));
+      layers.push({ src: "before", t: 1.5, zoom: 1.02 + .03 * r });
+      layers.push({ src: "after", t: 1.5, zoom: 1.02 + .03 * r, alpha: k });
+      window.__x = null;
+    }
+  } else {
+    layers.push({ src: "after", t: 3.5, zoom: 1.1, blur: 36, dim: .5 });
+  }
+  window.__plan = { layers };
+
+  // ---- graphics ----
+  M.riseWords(hookWords, t, 0.25, { out: T.hook, outDur: .35 });
+  $("hook").style.display = t < T.hook ? "block" : "none";
+  const pk = outExpo((t - T.hook - .35) / .55) * (1 - prog(t, T.action - .35, T.action));
+  $("plate").style.display = t >= T.hook && t < T.action ? "block" : "none";
+  show($("plate"), pk, 28);
+
+  const inReveal = t >= T.action && t < T.reveal;
+  const split = inReveal && P.aligned;
+  $("divider").style.display = split ? "block" : "none";
+  const tagK = inReveal ? outExpo((t - T.action - .3) / .5) * (1 - prog(t, T.reveal - .3, T.reveal)) : 0;
+  if (split) {
+    const px = window.__x * 1080;
+    $("divider").style.left = px + "px";
+    const bw = $("tagB").offsetWidth, aw = $("tagA").offsetWidth;
+    // tags fade as the divider passes over them
+    $("tagB").style.opacity = tagK * clamp((px - 64 - bw - 16) / 40);
+    $("tagA").style.opacity = tagK * clamp((1080 - 64 - aw - 16 - px) / 40);
+  } else {
+    const k = inReveal ? inOutSine(prog(t, T.action + .6, T.action + 1.8)) : 0;
+    $("tagB").style.opacity = tagK * (1 - k); $("tagA").style.opacity = tagK * k;
+  }
+  $("scrim").style.opacity = t < T.reveal ? 1 : 0;
+  EndCard.seek(t, T.reveal);
+};
+window.seek(0);
+</script></body></html>

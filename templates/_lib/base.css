@@ -1,0 +1,32 @@
+/* Crewreel template base. 1080x1920 canvas, transparent background (footage is composited underneath).
+   Safe zones: keep text out of the top 300px and bottom 520px (IG/TikTok UI). */
+html,body{margin:0;width:1080px;height:1920px;background:transparent;overflow:hidden}
+body{font-family:"Inter Display","Inter",sans-serif;color:#fff;-webkit-font-smoothing:antialiased;font-feature-settings:"ss01","cv11"}
+.layer{position:absolute;inset:0}
+.w{display:inline-block;will-change:transform}
+.acc{color:var(--accent)}
+.scrim{background:linear-gradient(to bottom,rgba(0,0,0,.58),rgba(0,0,0,.38) 18%,rgba(0,0,0,0) 36%),linear-gradient(to top,rgba(0,0,0,.55),rgba(0,0,0,.25) 22%,rgba(0,0,0,0) 40%)}
+.hook{position:absolute;left:80px;right:80px;top:330px;font-weight:700;font-size:100px;line-height:1.0;letter-spacing:-3px;
+  text-shadow:0 2px 40px rgba(0,0,0,.45),0 2px 6px rgba(0,0,0,.35)}
+.plate{position:absolute;left:80px;bottom:600px;max-width:840px;padding:26px 34px 28px;border-radius:22px;
+  background:rgba(12,14,16,.55);backdrop-filter:blur(18px) saturate(1.2);-webkit-backdrop-filter:blur(18px) saturate(1.2)}
+.plate .k{font-size:30px;font-weight:600;letter-spacing:4px;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+.plate .v{text-wrap:balance;font-size:56px;font-weight:650;line-height:1.12;letter-spacing:-1px}
+.tag{position:absolute;top:330px;font-weight:650;font-size:30px;letter-spacing:5px;text-transform:uppercase;padding:14px 22px 13px;
+  border-radius:12px;background:rgba(12,14,16,.5);backdrop-filter:blur(12px)}
+.divider{position:absolute;top:0;bottom:0;width:6px;margin-left:-3px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.08),0 0 30px rgba(0,0,0,.35)}
+.handle{position:absolute;top:50%;width:84px;height:84px;margin:-42px 0 0 -42px;border-radius:50%;background:#fff;
+  box-shadow:0 8px 30px rgba(0,0,0,.35);display:grid;place-items:center}
+.handle svg{width:44px;height:44px}
+/* End card: sits over a blurred, dimmed 'after' frame supplied by the compositor */
+.end{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:300px 90px 520px;box-sizing:border-box}
+.end .logo{width:168px;height:168px;border-radius:40px;background:var(--accent);display:grid;place-items:center;font-weight:800;font-size:76px;color:#0b0e10;
+  box-shadow:0 20px 60px rgba(0,0,0,.35);overflow:hidden}
+.end .logo img{width:100%;height:100%;object-fit:cover}
+.end .biz{margin-top:48px;font-weight:700;font-size:82px;letter-spacing:-2.5px;line-height:1.02}
+.end .area{margin-top:20px;font-size:40px;color:rgba(255,255,255,.72);font-weight:500}
+.end .rule{width:120px;height:4px;border-radius:2px;background:var(--accent);margin-top:56px}
+.end .cta{margin-top:56px;font-weight:700;font-size:60px;letter-spacing:-1.5px}
+.end .url{margin-top:28px;font-size:42px;font-weight:650;color:#0b0e10;background:#fff;padding:24px 40px;border-radius:999px;
+  box-shadow:0 14px 40px rgba(0,0,0,.3)}
+.end .url .arr{margin-left:18px;font-weight:700}

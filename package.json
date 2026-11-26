@@ -1,0 +1,9 @@
+{
+  "name": "crewreel",
+  "private": true,
+  "scripts": {
+    "sample": "python scripts/gen_placeholder.py pavers footage/driveway && python render/render.py templates/driveway footage/driveway out/driveway.mp4",
+    "test": "pytest -q"
+  },
+  "dependencies": { "playwright": "^1.48.0" }
+}

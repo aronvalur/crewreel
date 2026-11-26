@@ -1,0 +1,111 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../_lib/base.css">
+<script src="../_lib/motion.js"></script>
+<script src="../_lib/endcard.js"></script>
+<style>
+  #sweep{position:absolute;top:0;bottom:0;width:520px;margin-left:-260px;
+    background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.55) 50%,rgba(255,255,255,0));mix-blend-mode:screen}
+  #label{position:absolute;left:80px;bottom:600px;font-weight:650;font-size:30px;letter-spacing:5px;text-transform:uppercase;
+    padding:14px 22px 13px;border-radius:12px;background:rgba(12,14,16,.5);backdrop-filter:blur(12px)}
+  #big{position:absolute;left:80px;right:80px;top:330px;font-weight:700;font-size:92px;line-height:1.02;letter-spacing:-3px;
+    text-shadow:0 2px 40px rgba(0,0,0,.45),0 2px 6px rgba(0,0,0,.35)}
+  .plate .v{text-wrap:balance}
+  #step{position:absolute;right:80px;top:330px;font-weight:650;font-size:30px;letter-spacing:4px;color:rgba(255,255,255,.85)}
+</style>
+</head>
+<body>
+<div id="scrim" class="layer scrim"></div>
+<div id="hook" class="hook"></div>
+<div id="step"></div>
+<div id="plate" class="plate"><div class="k" id="plateK"></div><div class="v" id="plateV"></div></div>
+<div id="sweep"></div>
+<div id="big"></div>
+<div id="label"></div>
+<script>
+// Template 2 — "House Wash Transformation" (9:16, 20 s)
+// 0–2.5 hook over wide before · 2.5–9 three action clips with method plate · 9–14 before→after with light sweep
+// 14–17 two detail shots (push-in + label) · 17–20 end card over blurred after
+const P = Object.assign({
+  accent: "#9BE7B0", business: "Valur Exterior Cleaning", initials: "V", area: "Reykjavík & Kópavogur",
+  url: "crewreel.app/q/valur", hook: "Green siding?\n*One* visit.",
+  steps: ["Soft wash", "Low-pressure rinse", "Detail"],
+  method: "Low-pressure soft wash. Safe on siding, tough on algae.",
+  result: "Same day.\nNo damage.",
+  details: [{ label: "Siding", fx: .3, fy: .75 }, { label: "Windows", fx: .5, fy: .42 }],
+  vo: [
+    { at: 0.3, text: "This house hadn't been washed in years." },
+    { at: 2.9, text: "Low-pressure soft wash. Safe on siding, tough on algae." },
+    { at: 9.8, text: "Same day. No damage." },
+    { at: 17.3, text: "Get a free quote at the link." }
+  ]
+}, window.PARAMS || {});
+const T = { hook: 2.5, a1: 4.6, a2: 6.8, action: 9.0, sweep: 14.0, d1: 15.5, details: 17.0, total: 20.0 };
+window.META = { fps: 30, duration: T.total, sources: ["before", "after", "action1", "action2", "action3"],
+  cuts: [T.hook, T.a1, T.a2, T.action, T.sweep, T.d1, T.details], impacts: [T.action + 1.6], vo: P.vo };
+document.documentElement.style.setProperty("--accent", P.accent);
+const { $, prog, outExpo, inOutCubic, inOutSine, clamp, show } = M;
+const hookWords = M.words($("hook"), P.hook);
+const bigWords = M.words($("big"), P.result);
+$("plateK").textContent = "The method"; $("plateV").textContent = P.method;
+EndCard.mount(P);
+
+window.seek = function (t) {
+  const L = [];
+  if (t < T.hook) {
+    L.push({ src: "before", t, zoom: 1.12 - .08 * inOutSine(t / T.hook), fy: .45 });     // slow pull-out: shows the whole wall
+  } else if (t < T.action) {
+    const i = t < T.a1 ? 0 : t < T.a2 ? 1 : 2, s = [T.hook, T.a1, T.a2][i];
+    L.push({ src: "action" + (i + 1), t: t - s, zoom: 1.03 + .03 * prog(t, s, s + 2.2) });
+  } else if (t < T.sweep) {
+    // before → after: a soft light bar sweeps left→right and the after image follows it
+    const k = inOutCubic(prog(t, T.action + .9, T.action + 2.3));
+    window.__sx = -0.25 + 1.5 * k;
+    L.push({ src: "before", t: 2 + (t - T.action) * .4, zoom: 1.02 });
+    if (P.aligned) L.push({ src: "after", t: 2 + (t - T.action) * .4, zoom: 1.02, mask: [-1, window.__sx], feather: 220 });
+    else L.push({ src: "after", t: 2 + (t - T.action) * .4, zoom: 1.02, alpha: k });
+    // after the reveal, slow push on the clean result
+    if (t > T.action + 2.3) L[L.length - 1].zoom = L[0].zoom = 1.02 + .05 * inOutSine(prog(t, T.action + 2.3, T.sweep));
+    if (t > T.action + 2.3) L[L.length - 1].mask = undefined, L[L.length - 1].alpha = 1;
+  } else if (t < T.details) {
+    const i = t < T.d1 ? 0 : 1, s = i ? T.d1 : T.sweep, d = P.details[i];
+    L.push({ src: "after", t: 1 + (t - s), zoom: 1.6 + .15 * inOutSine(prog(t, s, s + 1.5)), fx: d.fx, fy: d.fy });
+  } else {
+    L.push({ src: "after", t: 3, zoom: 1.1, blur: 36, dim: .5 });
+  }
+  L.forEach(l => { if (l.mask === undefined) delete l.mask; });
+  window.__plan = { layers: L };
+
+  M.riseWords(hookWords, t, .2, { out: T.hook, outDur: .3 });
+  $("hook").style.display = t < T.hook ? "block" : "none";
+
+  const inAct = t >= T.hook && t < T.action;
+  $("plate").style.display = inAct ? "block" : "none";
+  show($("plate"), outExpo((t - T.hook - .3) / .55) * (1 - prog(t, T.action - .35, T.action)), 28);
+  $("step").style.display = inAct ? "block" : "none";
+  if (inAct) {
+    const i = t < T.a1 ? 0 : t < T.a2 ? 1 : 2, s = [T.hook, T.a1, T.a2][i];
+    $("step").textContent = `0${i + 1} — ${P.steps[i]}`.toUpperCase();
+    show($("step"), outExpo((t - s - .1) / .4) * (1 - prog(t, [T.a1, T.a2, T.action][i] - .2, [T.a1, T.a2, T.action][i])), 16);
+  }
+
+  const inSweep = t >= T.action && t < T.sweep;
+  const sk = prog(t, T.action + .9, T.action + 2.3);
+  $("sweep").style.display = inSweep && sk > 0 && sk < 1 ? "block" : "none";
+  $("sweep").style.left = (window.__sx || 0) * 1080 + "px";
+  $("sweep").style.opacity = Math.sin(Math.PI * sk);
+  M.riseWords(bigWords, t, T.action + 2.2, { out: T.sweep, outDur: .3 });
+  $("big").style.display = inSweep ? "block" : "none";
+
+  const inDet = t >= T.sweep && t < T.details;
+  $("label").style.display = inDet ? "block" : "none";
+  if (inDet) {
+    const i = t < T.d1 ? 0 : 1, s = i ? T.d1 : T.sweep, e = i ? T.details : T.d1;
+    $("label").textContent = P.details[i].label;
+    show($("label"), outExpo((t - s - .15) / .45) * (1 - prog(t, e - .2, e)), 16);
+  }
+  $("scrim").style.opacity = t < T.details ? 1 : 0;
+  EndCard.seek(t, T.details);
+};
+window.seek(0);
+</script></body></html>
