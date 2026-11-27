@@ -74,7 +74,7 @@
 - Shipped pre-upload footage check on the New reel form (short / sideways / low-res, per-slot minimums).
   Checked in an iPhone-sized browser.
 - Shipped golden frames (`scripts/golden.py`, 12 frames) as a visual regression test.
-- Tests: 37 → 59 (all green locally; 5 web tests now run too).
+- Tests: 37 → 55, all green locally (incl. the 5 web tests).
 - Self-check notes that changed direction: (a) ~45 min: after the focus work I weighed the online beta vs a
   third template; picked the template (reel quality + market) first, then built the render hand-off as a
   finished slice instead of deploying, because (b) Render free's disk is ephemeral and the service sleeps, so
