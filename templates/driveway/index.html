@@ -49,6 +49,14 @@ window.relayout = () => {                // re-run after web fonts load (overlay
   if (z === 0) { el.style.bottom = "auto"; el.style.top = "330px"; }
   el.style.display = d;
   window.PLATE_ZONE = z;
+  // hook sits over the calmest band of the before shot (not over the garage door or a parked car)
+  const e = $("hook"), dd = e.style.display;
+  e.style.display = "block"; e.style.top = "";
+  const h = e.offsetHeight, zz = M.calmZone(P, P.aligned ? ["before", "after"] : ["before"], [[330, 330 + h], [1920 - 640 - h, 1920 - 640]]);
+  if (zz === 1) e.style.top = (1920 - 640 - h) + "px";
+  e.style.display = dd;
+  window.HOOK_ZONE = zz;
+  $("scrim").classList.toggle("low", zz === 1);   // text low: deeper bottom scrim
 };
 window.relayout();
 

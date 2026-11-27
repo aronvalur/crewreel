@@ -20,6 +20,7 @@ from PIL import Image
 sys.path.insert(0, os.path.dirname(__file__))
 import align
 import audio
+import focus
 import ingest
 import stabilize
 
@@ -49,7 +50,8 @@ class Clip:
             self.proc.kill()
         vf = f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={self.fps}"
         self.proc = subprocess.Popen(["ffmpeg", "-loglevel", "error", "-i", self.path, "-vf", vf,
-                                      "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE)
+                                      "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE,
+                                     stderr=subprocess.DEVNULL)   # we kill readers early: no 'Broken pipe' spam
         self.idx, self.cur, self.prev = -1, None, None
 
     def _post(self, f, i=0):
@@ -230,6 +232,7 @@ def main():
     ap.add_argument("--vo-take", default=None, help="one VO recording holding every template line, split on pauses")
     args = ap.parse_args()
     t0 = time.time()
+    os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
     work = tempfile.mkdtemp(prefix="crewreel-")
     params = json.load(open(args.params)) if args.params else {}
 
@@ -253,6 +256,18 @@ def main():
     b, a = find_clip(footage, "before"), find_clip(footage, "after")
     al = align.plan_alignment(first_frame(b), first_frame(a)) if b and a else dict(ok=False, zoom=1, score=0)
     params["aligned"] = bool(al["ok"])
+    # where the clean-up shows most (detail push-ins) and which bands are calm enough for text
+    params["busy"] = {}
+    for name, path in (("before", b), ("after", a)):
+        if path:
+            fr = focus.to_render_space(first_frame(path), al.get(name) if al["ok"] else None,
+                                       al["zoom"] if al["ok"] else 1.0)
+            params["busy"][name] = focus.busy_profile(fr)
+            if name == "before":
+                fb = fr
+    if al["ok"]:
+        params["focus"] = focus.change_points(fb, fr)
+        print("focus:", ", ".join(f"({p['fx']:.2f},{p['fy']:.2f}) {p['score']:.0f}" for p in params["focus"]) or "none")
     params["activity"] = {k: v.get("activity") for k, v in report.items() if v.get("activity")}
     pfile = os.path.join(work, "params.json")
     json.dump(params, open(pfile, "w"))

@@ -51,8 +51,27 @@ window.M = (() => {
     es.forEach((e, i) => { if (e < es[best] * bias && e < es[best] - .04) best = i; });
     return best;
   };
+  // Pick the text zone over the calmest part of a still-ish shot (hooks, result lines).
+  // P.busy[name] = visual-detail profile from render/focus.py (windows, doors, rooflines score high;
+  // sky, lawn and plain siding low). Zone 0 stays unless another is clearly calmer.
+  const calmZone = (P, names, zones, bias = .8) => {
+    const ps = names.map(n => (P.busy || {})[n]).filter(Boolean);
+    if (!ps.length) return 0;
+    const n = ps[0].length, bh = 1920 / n;
+    const energy = ([y0, y1]) => ps.reduce((s, p) => {
+      let e = 0;
+      for (let i = 0; i < n; i++) e += p[i] * clamp((Math.min(y1, (i + 1) * bh) - Math.max(y0, i * bh)) / bh);
+      return s + e / ((y1 - y0) / bh);               // mean detail per band: zones of any height compare fairly
+    }, 0) / ps.length;
+    const es = zones.map(energy);
+    let best = 0;
+    es.forEach((e, i) => { if (e < es[best] * bias) best = i; });
+    return best;
+  };
+  // Detail push-in focus: P.focus[i] (where the clean-up shows most, from render/focus.py) or a fallback.
+  const focusAt = (P, i, fallback) => ((P.focus || [])[i]) || fallback;
   // Seconds a viewer needs to read a line: 0.9 s + 0.28 s per word, at least 2.2 s.
   const readTime = text => Math.max(2.2, .9 + .28 * String(text).trim().split(/\s+/).length);
   const activity = (P, names) => names.map(n => (P.activity || {})[n] && P.activity[n].profile);
-  return { quietZone, activity, readTime, clamp, outCubic, outExpo, inOutCubic, inOutSine, prog, lerp, $, esc, words, riseWords, show };
+  return { quietZone, calmZone, focusAt, activity, readTime, clamp, outCubic, outExpo, inOutCubic, inOutSine, prog, lerp, $, esc, words, riseWords, show };
 })();
