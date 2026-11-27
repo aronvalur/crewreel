@@ -1,0 +1,59 @@
+# Renders one customer job (dispatched by worker/remote.py on the web box).
+# Footage arrives as assets of the temporary pre-release job-<id>; the reel goes back to the same release,
+# and the web box downloads it and deletes the release. Free runner minutes only (docs/DECISIONS.md).
+name: render-job
+run-name: render ${{ inputs.template }} ${{ inputs.job_id }}
+on:
+  workflow_dispatch:
+    inputs:
+      job_id: { description: "Job id", required: true, type: string }
+      template: { description: "Reel style", required: true, type: string }
+
+permissions:
+  contents: write
+
+concurrency:
+  group: render-job-${{ inputs.job_id }}
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: job-${{ inputs.job_id }}
+    steps:
+      - name: Check inputs
+        run: |
+          [[ "${{ inputs.job_id }}" =~ ^[A-Za-z0-9-]{6,64}$ ]] || { echo "bad job id"; exit 1; }
+          [[ "${{ inputs.template }}" =~ ^[a-z-]{3,32}$ ]] || { echo "bad template"; exit 1; }
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - run: pip install -r requirements.txt
+      - run: npm install --no-audit --no-fund && npx playwright install --with-deps chromium
+      - name: Fetch footage
+        run: |
+          mkdir -p job/in
+          gh release download "$TAG" --dir job/in
+          mv job/in/params.json job/params.json
+          ls -la job/in
+      - name: Render
+        run: |
+          set -o pipefail
+          TAKE="assets/vo/${{ inputs.template }}_blain.mp3"
+          VO=(); [ -f "$TAKE" ] && VO=(--vo-take "$TAKE")
+          python render/render.py "templates/${{ inputs.template }}" job/in job/out/reel.mp4 \
+            --params job/params.json "${VO[@]}" 2>&1 | tee job/render.log
+          python -c "import sys; sys.path.insert(0,'worker'); import worker; worker.make_poster('job/out/reel.mp4', '${{ inputs.template }}', 'job/out/poster.jpg')"
+      - name: Return reel
+        run: gh release upload "$TAG" job/out/reel.mp4 job/out/reel.footage.json job/out/poster.jpg --clobber
+      - name: Report failure
+        if: failure()
+        run: |
+          cp job/render.log error.txt 2>/dev/null || echo "render failed before logging" > error.txt
+          gh release upload "$TAG" error.txt --clobber
