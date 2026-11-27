@@ -8,6 +8,7 @@ on:
     inputs:
       job_id: { description: "Job id", required: true, type: string }
       template: { description: "Reel style", required: true, type: string }
+      selftest: { description: "Placeholder footage, result as artifact (no release)", type: boolean, default: false }
 
 permissions:
   contents: write
@@ -36,7 +37,14 @@ jobs:
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       - run: pip install -r requirements.txt
       - run: npm install --no-audit --no-fund && npx playwright install --with-deps chromium
+      - name: Placeholder footage (self-test)
+        if: inputs.selftest
+        run: |
+          case "${{ inputs.template }}" in driveway) S=pavers;; house-wash) S=siding;; *) S=${{ inputs.template }};; esac
+          python scripts/gen_placeholder.py "$S" job/in
+          echo '{"business":"Self Test Cleaning","area":"Reykjavík"}' > job/params.json
       - name: Fetch footage
+        if: ${{ !inputs.selftest }}
         run: |
           mkdir -p job/in
           gh release download "$TAG" --dir job/in
@@ -50,10 +58,15 @@ jobs:
           python render/render.py "templates/${{ inputs.template }}" job/in job/out/reel.mp4 \
             --params job/params.json "${VO[@]}" 2>&1 | tee job/render.log
           python -c "import sys; sys.path.insert(0,'worker'); import worker; worker.make_poster('job/out/reel.mp4', '${{ inputs.template }}', 'job/out/poster.jpg')"
+      - name: Self-test result
+        if: inputs.selftest
+        uses: actions/upload-artifact@v4
+        with: { name: "selftest-${{ inputs.template }}", path: job/out/*, retention-days: 7 }
       - name: Return reel
+        if: ${{ !inputs.selftest }}
         run: gh release upload "$TAG" job/out/reel.mp4 job/out/reel.footage.json job/out/poster.jpg --clobber
       - name: Report failure
-        if: failure()
+        if: failure() && !inputs.selftest
         run: |
           cp job/render.log error.txt 2>/dev/null || echo "render failed before logging" > error.txt
           gh release upload "$TAG" error.txt --clobber
