@@ -1,4 +1,4 @@
-# Render host (docs/DECISIONS.md): GitHub Actions. This workflow renders both templates from
+# Render host (docs/DECISIONS.md): GitHub Actions. This workflow renders every template from
 # placeholder footage with the stock voiceover and attaches the reels, so every change to the
 # render pipeline can be watched, not just tested. Later: render customer jobs from a bucket.
 name: render-samples
@@ -29,14 +29,16 @@ jobs:
         run: |
           python scripts/gen_placeholder.py pavers footage/driveway
           python scripts/gen_placeholder.py siding footage/house
+          python scripts/gen_placeholder.py roof footage/roof
       - name: Render
         run: |
           mkdir -p out
           time python render/render.py templates/driveway footage/driveway out/driveway.mp4 --vo-take assets/vo/driveway_blain.mp3
           time python render/render.py templates/house-wash footage/house out/house-wash.mp4 --vo-take assets/vo/house-wash_blain.mp3
+          time python render/render.py templates/roof footage/roof out/roof.mp4 --vo-take assets/vo/roof_blain.mp3
       - name: Contact sheet
         run: |
-          for f in driveway house-wash; do
+          for f in driveway house-wash roof; do
             ffmpeg -loglevel error -y -i out/$f.mp4 -vf "fps=1/2,scale=270:-1,tile=8x1" -frames:v 1 out/$f-sheet.jpg
           done
       - uses: actions/upload-artifact@v4

@@ -1,0 +1,152 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../_lib/base.css">
+<script src="../_lib/motion.js"></script>
+<script src="../_lib/endcard.js"></script>
+<script src="../_lib/captions.js"></script>
+<style>
+  /* the rinse line: a soft bright band riding the wipe edge, like water sheeting down the roof */
+  #rinse{position:absolute;left:0;right:0;height:300px;margin-top:-150px;
+    background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.42) 50%,rgba(255,255,255,0));mix-blend-mode:screen}
+  #big{position:absolute;left:80px;right:80px;top:330px;font-weight:700;font-size:92px;line-height:1.02;letter-spacing:-3px;
+    text-shadow:0 2px 40px rgba(0,0,0,.45),0 2px 6px rgba(0,0,0,.35)}
+  .chip{position:absolute;left:80px;font-weight:650;font-size:30px;letter-spacing:5px;text-transform:uppercase;
+    padding:14px 22px 13px;border-radius:12px;background:rgba(12,14,16,.5);backdrop-filter:blur(12px)}
+  #tagA{top:330px} #tagB{bottom:600px} #label{bottom:600px}
+</style>
+</head>
+<body>
+<div id="scrim" class="layer scrim"></div>
+<div id="hook" class="hook"></div>
+<div id="plate" class="plate"><div class="k" id="plateK"></div><div class="v" id="plateV"></div></div>
+<div id="rinse"></div>
+<div id="tagA" class="chip">After</div><div id="tagB" class="chip">Before</div>
+<div id="big"></div>
+<div id="label" class="chip"></div>
+<script>
+// Template 3 — "Roof Soft Wash" (9:16, 18 s)
+// 0–2.8 hook over the streaked roof (slow tilt down from the ridge) · 2.8–8 two action clips + method plate
+// 8–13 top-to-bottom rinse wipe before→after (the way a roof is actually rinsed) + result line
+// 13–15 up-close wipe where the change is biggest · 15–18 end card
+const P = Object.assign({
+  accent: "#FFC86B", business: "Valur Exterior Cleaning", initials: "V", area: "Reykjavík & Kópavogur",
+  url: "crewreel.app/q/valur", hook: "Black streaks?\nThat's *algae.*",
+  methodLabel: "The method", method: "Soft wash, not pressure. Kills the algae, spares the shingles.",
+  result: "Ridge to gutter.\nStreak-free.",
+  closeLabel: "Up close",
+  vo: [
+    { at: 0.3, text: "Those black streaks on your roof? That's algae." },
+    { at: 3.2, text: "We soft wash it. Low pressure, so the shingles stay safe." },
+    { at: 10.6, text: "Ridge to gutter, streak-free." },
+    { at: 15.3, text: "Get a free quote at the link." }
+  ]
+}, window.PARAMS || {});
+const T = { hook: 2.8, a1: 5.4, action: 8.0, reveal: 13.0, close: 15.0, total: 18.0 };
+const W0 = T.action + .5, W1 = T.action + 2.4;          // rinse wipe runs ridge -> gutter
+window.META = { fps: 30, duration: T.total, sources: ["before", "after", "action1", "action2"],
+  cuts: [T.hook, T.a1, T.action, T.reveal, T.close], impacts: [W1 - .1], vo: P.vo };
+document.documentElement.style.setProperty("--accent", P.accent);
+const { $, prog, outExpo, inOutCubic, inOutSine, clamp, show } = M;
+const hookWords = M.words($("hook"), P.hook);
+const bigWords = M.words($("big"), P.result);
+$("plateK").textContent = P.methodLabel; $("plateV").textContent = P.method;
+$("label").textContent = P.closeLabel;
+EndCard.mount(P);
+Captions.mount();
+
+window.relayout = () => {                // re-run after web fonts load (overlay.js calls it)
+  // method plate: high unless the action is up top (crews often film the ridge from a ladder)
+  const el = $("plate"), d = el.style.display;
+  el.style.display = "block"; el.style.top = ""; el.style.bottom = "";
+  const ph = el.offsetHeight;
+  const z = M.quietZone(M.activity(P, ["action1", "action2"]), [[330, 330 + ph], [1920 - 600 - ph, 1920 - 600]]);
+  if (z === 0) { el.style.bottom = "auto"; el.style.top = "330px"; }
+  el.style.display = d;
+  window.PLATE_ZONE = z;
+  // hook and result line over the calmest band (sky or plain shingles, not the dormer or the gutter line)
+  for (const [id, srcs] of [["hook", P.aligned ? ["before", "after"] : ["before"]], ["big", ["after"]]]) {
+    const e = $(id), dd = e.style.display;
+    e.style.display = "block"; e.style.top = "";
+    const h = e.offsetHeight, zz = M.calmZone(P, srcs, [[330, 330 + h], [1920 - 640 - h, 1920 - 640]]);
+    if (zz === 1) e.style.top = (1920 - 640 - h) + "px";
+    e.style.display = dd;
+    window[id.toUpperCase() + "_ZONE"] = zz;
+  }
+  $("scrim").classList.toggle("low", window.HOOK_ZONE === 1 || window.BIG_ZONE === 1);
+};
+window.relayout();
+
+window.seek = function (t) {
+  const L = [];
+  let wipeY = null;
+  if (t < T.hook) {
+    // slow tilt down from the ridge: the streaks reveal themselves as the shot settles
+    const k = inOutSine(t / T.hook);
+    L.push({ src: "before", t, zoom: 1.14 - .08 * k, fy: .3 + .3 * k });
+  } else if (t < T.action) {
+    const i = t < T.a1 ? 0 : 1, s = i ? T.a1 : T.hook;
+    L.push({ src: "action" + (i + 1), t: t - s + .15, zoom: 1.03 + .04 * prog(t, s, s + 2.6) });
+  } else if (t < T.reveal) {
+    const ct = 1.5 + (t - T.action) * .4;
+    const k = inOutCubic(prog(t, W0, W1));
+    const push = 1.02 + .05 * inOutSine(prog(t, W1, T.reveal));
+    L.push({ src: "before", t: ct, zoom: push });
+    if (P.aligned) {
+      wipeY = -.15 + 1.3 * k;
+      const a = { src: "after", t: ct, zoom: push };
+      if (k < 1) Object.assign(a, { vmask: [-1, wipeY], feather: 260 });
+      L.push(a);
+    } else {
+      L.push({ src: "after", t: ct, zoom: push, alpha: k });   // no reliable alignment: soft crossfade
+    }
+  } else if (t < T.close) {
+    const f = M.focusAt(P, 0, { fx: .5, fy: .58 });
+    const base = { zoom: 1.6 + .15 * inOutSine(prog(t, T.reveal, T.close)), fx: f.fx, fy: f.fy };
+    if (P.aligned && (P.focus || []).length) {
+      const k = inOutCubic(prog(t, T.reveal + .2, T.reveal + 1.1));
+      L.push({ src: "before", t: 2.5 + (t - T.reveal), ...base });
+      L.push({ src: "after", t: 2.5 + (t - T.reveal), ...base, vmask: [-1, -.2 + 1.4 * k], feather: 200 });
+    } else {
+      L.push({ src: "after", t: 2.5 + (t - T.reveal), ...base });
+    }
+  } else {
+    L.push({ src: "after", t: 3, zoom: 1.1, blur: 36, dim: .5 });
+  }
+  window.__plan = { layers: L };
+
+  M.riseWords(hookWords, t, .2, { out: T.hook, outDur: .3 });
+  $("hook").style.display = t < T.hook ? "block" : "none";
+
+  const inAct = t >= T.hook && t < T.action;
+  $("plate").style.display = inAct ? "block" : "none";
+  const plateOut = Math.min(T.action, T.hook + .3 + M.readTime(P.methodLabel + " " + P.method) + .4);
+  show($("plate"), outExpo((t - T.hook - .3) / .55) * (1 - inOutSine(prog(t, plateOut - .4, plateOut))), 28);
+
+  // rinse line rides the wipe edge
+  const rk = prog(t, W0, W1);
+  $("rinse").style.display = wipeY !== null && rk > 0 && rk < 1 ? "block" : "none";
+  if (wipeY !== null) { $("rinse").style.top = wipeY * 1920 + "px"; $("rinse").style.opacity = Math.sin(Math.PI * rk); }
+
+  // tags: BEFORE (low) until the rinse reaches it, AFTER (top) once the rinse has passed it
+  const inRev = t >= T.action && t < T.reveal;
+  const tagK = inRev ? outExpo((t - T.action - .15) / .45) : 0;
+  const bTop = 1920 - 600 - 60, aBottom = 330 + 60;
+  const y = wipeY === null ? (P.aligned ? 2 : -1) : wipeY * 1920;
+  const fade = P.aligned ? 1 : inOutSine(prog(t, W0, W1));
+  $("tagB").style.opacity = tagK * (P.aligned ? clamp((bTop - y) / 60) : 1 - fade) * (1 - prog(t, W1, W1 + .3));
+  $("tagA").style.opacity = tagK * (P.aligned ? clamp((y - aBottom) / 60) : fade) * (1 - prog(t, W1, W1 + .3));
+  $("tagA").style.display = $("tagB").style.display = inRev ? "block" : "none";
+
+  M.riseWords(bigWords, t, W1 + .3, { out: T.reveal, outDur: .3 });
+  $("big").style.display = inRev ? "block" : "none";
+
+  const inClose = t >= T.reveal && t < T.close;
+  $("label").style.display = inClose ? "block" : "none";
+  if (inClose) show($("label"), outExpo((t - T.reveal - .15) / .45) * (1 - prog(t, T.close - .2, T.close)), 16);
+
+  $("scrim").style.opacity = t < T.close ? 1 : 0;
+  Captions.seek(t, P.voTiming, P.vo);
+  EndCard.seek(t, T.close);
+};
+window.seek(0);
+</script></body></html>

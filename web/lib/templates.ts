@@ -12,7 +12,7 @@ export type Slot = {
 export type Field = { name: string; label: string; placeholder: string; max: number; hint?: string };
 
 export type Template = {
-  id: "driveway" | "house-wash";
+  id: "driveway" | "house-wash" | "roof";
   title: string;
   length: string;
   blurb: string;
@@ -59,6 +59,26 @@ export const TEMPLATES: Template[] = [
         hint: "Wrap one word in *stars* to colour it." },
       { name: "method", label: "How you cleaned it", placeholder: "Low-pressure soft wash. Safe on siding, tough on algae.", max: 70 },
       { name: "result", label: "Result line", placeholder: "Same day.\nNo damage.", max: 30 },
+    ],
+  },
+  {
+    id: "roof",
+    title: "Roof soft wash",
+    length: "18 s",
+    blurb: "The streaked roof, the soft wash, then a ridge-to-gutter rinse reveal and a close-up.",
+    slots: [
+      { name: "before", label: "Before", kind: "photo-or-video",
+        hint: "From the street or a ladder, phone upright, ridge to gutter in frame. Hold still for 5 seconds." },
+      { name: "action1", label: "Applying", kind: "video", hint: "Spraying the soft wash on the roof, 3–5 seconds." },
+      { name: "action2", label: "Rinsing", kind: "video", hint: "Rinsing down the slope, 3–5 seconds." },
+      { name: "after", label: "After", kind: "photo-or-video",
+        hint: "Same spot as the before shot, ideally once it has dried. Hold still for 5 seconds." },
+    ],
+    fields: [
+      { name: "hook", label: "Opening line", placeholder: "Black streaks?\nThat's *algae.*", max: 40,
+        hint: "Wrap one word in *stars* to colour it." },
+      { name: "method", label: "How you cleaned it", placeholder: "Soft wash, not pressure. Kills the algae, spares the shingles.", max: 70 },
+      { name: "result", label: "Result line", placeholder: "Ridge to gutter.\nStreak-free.", max: 32 },
     ],
   },
 ];

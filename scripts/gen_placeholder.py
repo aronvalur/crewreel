@@ -1,7 +1,7 @@
 """Generate placeholder job footage for testing templates (NOT for customer reels).
 
 Creates procedural 'before', 'after' and 'action' clips for two surfaces:
-  pavers  (driveway)   and   siding (house wash)
+  pavers (driveway), siding (house wash), roof (roof soft wash)
 The 'after' clip is deliberately shot from a slightly different camera position
 (shift + rotation) so the auto-align step has something real to fix.
 
@@ -34,6 +34,20 @@ def base_surface(kind, h=H * 2, w=W * 2):
         # grass edge on the left, house wall at top
         img[:, : w // 8] = np.dstack([grain * 40 + 40, grain * 70 + 90, grain * 30 + 35])[:, : w // 8]
         img[: h // 6] = np.dstack([grain * 30 + 200, grain * 30 + 196, grain * 30 + 188])[: h // 6]
+    elif kind == "roof":   # asphalt shingles, sky above the ridge, gutter at the eave
+        img = np.dstack([grain * 50 + 118, grain * 48 + 112, grain * 46 + 104])
+        row = 56
+        r = np.arange(h) // row
+        tab = ((np.arange(w)[None, :] + (r[:, None] % 2) * 60) % 120) < 5
+        img[tab] *= .45
+        img[(np.arange(h) % row) < 5] *= .55
+        img *= (np.clip((np.arange(h) % row) / row, 0, 1) * .12 + .9)[:, None, None]
+        r0 = int(h * .3)                                                    # ridge (frame shows rows h/4..3h/4)
+        img[:r0] = np.dstack([grain * 10 + 150, grain * 10 + 188, grain * 10 + 232])[:r0]
+        img[r0:r0 + 14] = 60                                                # ridge cap line
+        g0 = int(h * .68)
+        img[g0:g0 + 26] = 228                                               # white gutter
+        img[g0 + 26:] = np.dstack([grain * 40 + 60, grain * 60 + 110, grain * 30 + 50])[g0 + 26:]  # lawn
     else:  # siding
         img = np.dstack([grain * 25 + 222, grain * 25 + 222, grain * 25 + 216])
         boards = (np.arange(h) % 46)
@@ -55,14 +69,22 @@ def dirt_mask(kind, h=H * 2, w=W * 2):
     m = np.clip((m - .25) * 1.8, 0, 1)
     if kind == "siding":   # algae heavier near the bottom and under boards
         m *= np.linspace(.5, 1.0, h)[:, None]
+    if kind == "roof":     # black streaks run down the slope, heavier towards the eave
+        cols = np.random.default_rng(13).random((3, w // 28)).astype(np.float32)
+        streak = cv2.resize(cols, (w, h), interpolation=cv2.INTER_CUBIC) * .75 + noise(h, w, 50, 14) * .25
+        m = np.clip((streak - .35) * 2.4, 0, 1) * np.clip(np.linspace(-.2, 1.3, h), 0, 1)[:, None]
+        m[: int(h * .3) + 14] = 0
+        m[int(h * .68):] = 0
     return m
 
 
 def dirty(img, kind, m):
-    tint = np.array([70, 75, 60], np.float32) if kind == "pavers" else np.array([95, 120, 70], np.float32)
-    k = (m * (.75 if kind == "pavers" else .6))[..., None]
+    tint = {"pavers": [70, 75, 60], "roof": [28, 28, 26]}.get(kind, [95, 120, 70])
+    tint = np.array(tint, np.float32)
+    k = (m * {"pavers": .75, "roof": .8}.get(kind, .6))[..., None]
     out = img * (1 - k) + tint * k
-    out[: img.shape[0] // (6 if kind == "pavers" else 10)] = img[: img.shape[0] // (6 if kind == "pavers" else 10)]
+    if kind != "roof":
+        out[: img.shape[0] // (6 if kind == "pavers" else 10)] = img[: img.shape[0] // (6 if kind == "pavers" else 10)]
     return out
 
 
@@ -101,7 +123,7 @@ def main(kind, out):
     # action: a cleaned band sweeping across (surface cleaner / soft wash wand)
     hh, ww = clean.shape[:2]
     yy, xx = np.mgrid[0:hh, 0:ww].astype(np.float32)
-    clips = 1 if kind == "pavers" else 3
+    clips = {"pavers": 1, "roof": 2}.get(kind, 3)
     for c in range(clips):
         frames = []
         for i in range(n if clips == 1 else FPS * 2):

@@ -148,6 +148,7 @@ def hexrgb(h):
 
 
 XS = np.arange(W, dtype=np.float32)
+YS = np.arange(H, dtype=np.float32)
 
 
 def render_layer(L, clips):
@@ -164,6 +165,10 @@ def render_layer(L, clips):
         x0, x1 = L["mask"][0] * W, L["mask"][1] * W
         f = float(L.get("feather", 1.5))
         a = a * (np.clip((XS - x0) / f + .5, 0, 1) * np.clip((x1 - XS) / f + .5, 0, 1))[None, :, None]
+    if "vmask" in L:  # vertical band [y0, y1] in 0..1 (top->bottom wipes, e.g. a roof rinsed ridge to gutter)
+        y0, y1 = L["vmask"][0] * H, L["vmask"][1] * H
+        f = float(L.get("feather", 1.5))
+        a = a * (np.clip((YS - y0) / f + .5, 0, 1) * np.clip((y1 - YS) / f + .5, 0, 1))[:, None, None]
     return img, a
 
 

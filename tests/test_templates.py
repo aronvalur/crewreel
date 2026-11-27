@@ -39,14 +39,14 @@ def act(names, prof):
     return {"activity": {n: {"profile": prof} for n in names}}
 
 
-@pytest.mark.parametrize("tpl,names", [("driveway", ["action1"]), ("house-wash", ["action1", "action2", "action3"])])
+@pytest.mark.parametrize("tpl,names", [("driveway", ["action1"]), ("house-wash", ["action1", "action2", "action3"]), ("roof", ["action1", "action2"])])
 def test_plate_moves_low_when_action_is_up_top(tpl, names):
     r = run(tpl, act(names, profile(.25, .07)), [4.0])
     assert r["zone"] == 1
     assert r["frames"][0]["top"] > 1920 * .55       # plate now sits in the lower part of the frame
 
 
-@pytest.mark.parametrize("tpl,names", [("driveway", ["action1"]), ("house-wash", ["action1", "action2", "action3"])])
+@pytest.mark.parametrize("tpl,names", [("driveway", ["action1"]), ("house-wash", ["action1", "action2", "action3"]), ("roof", ["action1", "action2"])])
 def test_plate_stays_high_when_action_is_low_or_unknown(tpl, names):
     r = run(tpl, act(names, profile(.66)), [4.0])
     assert r["zone"] == 0 and r["frames"][0]["bottom"] < 1920 * .45
@@ -60,7 +60,7 @@ def test_plate_leaves_after_reading_time():
     assert b["op"] < .05                     # gone before the reveal so the action breathes
 
 
-@pytest.mark.parametrize("tpl", ["driveway", "house-wash"])
+@pytest.mark.parametrize("tpl", ["driveway", "house-wash", "roof"])
 def test_bundled_fonts_load(tpl):
     """Type must come from the repo, not whatever the render machine has installed."""
     js = """
