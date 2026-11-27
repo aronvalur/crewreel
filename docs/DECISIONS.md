@@ -30,3 +30,24 @@ Every run reads this file and follows it. Reverse a decision only with a written
   automatically. Per-job custom VO (business name, area) waits for a product API key.
 - **Mix targets:** voice −18 dBFS RMS, music bed −26 dBFS alone and ducked a further 8 dB under the voice
   (≈15 dB below speech), echo on music/fx only (never on the voice), output −14 LUFS, true peak < −1.5 dBTP.
+
+## Run 7 (2026-11-27)
+- **Close-ups aim at the clean-up, not at fixed coordinates.** `render/focus.py` compares the aligned
+  before/after first frames (Lab, exposure-shift tolerant) and passes `P.focus` (up to 2 points) to templates.
+  Labels on close-ups are generic ("Up close") because we can't know what object is there.
+- **Text avoids the subject on still-ish shots.** `P.busy[before|after]` (edges + texture + distinct objects
+  per band); hooks and result lines drop to the lower zone (with a deeper bottom scrim) when the top band is
+  clearly busier. For hooks the after frame counts too when aligned (structure reads better without grime).
+- **Third template = Roof soft wash**, not window cleaning: roofs are the most dramatic before/after and the
+  highest-ticket job these contractors sell. Its reveal is a top-to-bottom rinse wipe (vmask), the way a roof
+  is actually rinsed. Stock VO take cost 210 credits (budget ≤400/run kept; account showed 11,814 left before it).
+- **Remote render hand-off = GitHub pre-release as a mailbox** (`worker/remote.py`, `render-job.yml`): the
+  web box uploads clips, dispatches the workflow, polls, downloads the reel and deletes the release + tag.
+  Outbound HTTPS only. A bucket replaces the release later; the dispatch stays.
+- **Going online needs durable storage.** Render free's disk is ephemeral and the service sleeps after 15 min,
+  so uploads and job records would vanish. Not worth deploying without a bucket; the bucket (Cloudflare R2,
+  needs an account + card) is the one true blocker → NEEDS_ARON.
+- **Wikimedia Commons rate-limits this sandbox (HTTP 429)** on both API and uploads. Don't spend run time on
+  it; placeholder footage per surface (pavers, siding, roof) covers tests, real clips come from Aron.
+- **Pre-upload footage check** in the web form uses the renderer's rules (min seconds per slot, sideways, low
+  res) and warns, never blocks.
