@@ -52,3 +52,34 @@
 - Tests: 31 → 34; CI green on GitHub Actions; render-samples produced both VO reels on the free runner in ~7 min.
 - Self-check: wanted per-job VO with the business name, but that needs a product API key (account action); stock VO with generic lines gets 90 % of the value for free today.
 - Grade: B− (up from C+). Reels now have a real voice, captions and a broadcast-level mix; the app flow works locally; CI renders on free infrastructure. Still not deployed online; no real customer footage.
+
+## 2026-11-27 — run 7 (nightly)
+- Self-review (tests + rendered both templates on placeholder footage, read frames). Weakest: (1) house-wash
+  hook and result line sat right on the window (the subject); (2) detail close-ups went to hard-coded spots
+  with labels ("Windows") that could be wrong on real footage; (3) only two job types, and the online path
+  still had no way to render off the web box. Also found: render.py crashed when the output folder was
+  missing; reader ffmpeg spammed "Broken pipe".
+- Shipped `render/focus.py`: before/after change map picks the close-up points where the clean-up shows most;
+  per-band "busy" profile moves hooks/result lines off windows, doors and rooflines (deeper bottom scrim when
+  text goes low). House-wash close-up 1 is now an up-close before→after wipe at the strongest change.
+  Verified on frames: hook and "Same day. No damage." now sit on plain siding under the window.
+- Shipped template 3, **Roof soft wash** (18 s): tilt-down hook, two action clips + method plate, ridge-to-gutter
+  rinse wipe with a light band on the edge and BEFORE/AFTER chips handing over, result line synced to the VO,
+  up-close wipe, end card. Compositor got vertical masks. Stock VO take (Blain, 210 credits), −14.3 LUFS.
+  Roof placeholder footage added. Wired into web picker, worker, render-samples.
+- Shipped remote rendering: `worker.py --remote github` ships a job's clips to a temporary pre-release,
+  dispatches `render-job.yml`, polls, downloads reel/poster/report and deletes the release + tag. Tested against
+  a fake GitHub API (4 tests); the workflow's render path verified for real on GitHub (self-test dispatch,
+  roof reel rendered in ~2.5 min, artifact 17 MB).
+- Shipped pre-upload footage check on the New reel form (short / sideways / low-res, per-slot minimums).
+  Checked in an iPhone-sized browser.
+- Shipped golden frames (`scripts/golden.py`, 12 frames) as a visual regression test.
+- Tests: 37 → 59 (all green locally; 5 web tests now run too).
+- Self-check notes that changed direction: (a) ~45 min: after the focus work I weighed the online beta vs a
+  third template; picked the template (reel quality + market) first, then built the render hand-off as a
+  finished slice instead of deploying, because (b) Render free's disk is ephemeral and the service sleeps, so
+  deploying without a bucket would lose customer uploads — not worth shipping. (c) Commons returned 429 on
+  every call; stopped after two tries instead of burning time.
+- Grade: B (up from B−). Three job types, close-ups and text placement now driven by the actual footage, and
+  rendering can run on free GitHub runners from a web box. Still not online (needs a bucket), still no real
+  customer footage.
