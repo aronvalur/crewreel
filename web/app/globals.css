@@ -101,3 +101,4 @@ input[type=color] { width: 52px; height: 40px; padding: 2px; border: 1px solid v
 .copy { white-space: pre-wrap; font-size: 15px; }
 .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .swatch { width: 14px; height: 14px; border-radius: 4px; display: inline-block; vertical-align: -2px; }
+.warn { color: var(--warn); margin-top: 4px; }

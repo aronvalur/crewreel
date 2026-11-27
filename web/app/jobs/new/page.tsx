@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TEMPLATES, type Slot } from "@/lib/templates";
 
-const mb = (n: number) => (n / 1024 / 1024).toFixed(n > 10 * 1024 * 1024 ? 0 : 1) + " MB";
+const mb = (n: number) => n < 100 * 1024 ? "<0.1 MB" : (n / 1024 / 1024).toFixed(n > 10 * 1024 * 1024 ? 0 : 1) + " MB";
 
 function SlotInput({ slot, file, onPick }: { slot: Slot; file?: File; onPick: (f?: File) => void }) {
   const [url, setUrl] = useState<string | null>(null);
@@ -14,16 +14,28 @@ function SlotInput({ slot, file, onPick }: { slot: Slot; file?: File; onPick: (f
     return () => URL.revokeObjectURL(u);
   }, [file]);
   const isVideo = file?.type.startsWith("video/") || /\.(mov|mp4|m4v|webm|mkv)$/i.test(file?.name || "");
+  // Same rules the renderer's footage check uses (render/ingest.py), said before the upload, not after.
+  const [meta, setMeta] = useState<{ dur: number; w: number; h: number } | null>(null);
+  useEffect(() => setMeta(null), [file]);
+  const notes: string[] = [];
+  if (meta && isVideo) {
+    if (slot.min && meta.dur > 0 && meta.dur < slot.min * .8)
+      notes.push(`${meta.dur.toFixed(1)} s: needs ~${slot.min} s, will play slow-mo`);
+    if (meta.w > meta.h * 1.1) notes.push("Sideways: we'll crop it to vertical");
+    if (Math.min(meta.w, meta.h) > 0 && Math.min(meta.w, meta.h) < 700) notes.push("Low resolution: will look soft");
+  }
   return (
     <label className={`drop${file ? " filled" : ""}`}>
       <input type="file" accept={slot.kind === "video" ? "video/*" : "video/*,image/*"}
         onChange={e => onPick(e.target.files?.[0])} />
       <div className="pv">
-        {url ? (isVideo ? <video src={url} muted playsInline preload="metadata" /> : <img src={url} alt="" />) : "9:16"}
+        {url ? (isVideo ? <video src={url} muted playsInline preload="metadata"
+          onLoadedMetadata={e => { const v = e.currentTarget; setMeta({ dur: v.duration, w: v.videoWidth, h: v.videoHeight }); }} /> : <img src={url} alt="" />) : "9:16"}
       </div>
       <div>
         <b>{slot.label}</b>
         <p className="muted small">{file ? `${file.name} · ${mb(file.size)}` : slot.hint}</p>
+        {notes.map(n => <p key={n} className="small warn">⚠ {n}</p>)}
       </div>
       <span className="btn ghost sm">{file ? "Change" : "Choose"}</span>
     </label>
