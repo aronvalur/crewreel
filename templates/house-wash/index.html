@@ -4,6 +4,7 @@
 <script src="../_lib/motion.js"></script>
 <script src="../_lib/endcard.js"></script>
 <script src="../_lib/captions.js"></script>
+<script src="../_lib/byline.js"></script>
 <style>
   #sweep{position:absolute;top:0;bottom:0;width:520px;margin-left:-260px;
     background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.55) 50%,rgba(255,255,255,0));mix-blend-mode:screen}
@@ -51,6 +52,7 @@ const hookWords = M.words($("hook"), P.hook);
 const bigWords = M.words($("big"), P.result);
 $("plateK").textContent = "The method"; $("plateV").textContent = P.method;
 EndCard.mount(P);
+Byline.mount(P);
 Captions.mount();
 // method plate spans all three action clips: high (under the step label) unless the action is up top
 window.relayout = () => {                // re-run after web fonts load (overlay.js calls it)
@@ -107,7 +109,8 @@ window.seek = function (t) {
   L.forEach(l => { if (l.mask === undefined) delete l.mask; });
   window.__plan = { layers: L };
 
-  M.riseWords(hookWords, t, .2, { out: T.hook, outDur: .3 });
+  M.riseWords(hookWords, t, -.12, { out: T.hook, outDur: .3 });
+  Byline.seek(t, .5, T.hook);
   $("hook").style.display = t < T.hook ? "block" : "none";
 
   const inAct = t >= T.hook && t < T.action;

@@ -4,6 +4,7 @@
 <script src="../_lib/motion.js"></script>
 <script src="../_lib/endcard.js"></script>
 <script src="../_lib/captions.js"></script>
+<script src="../_lib/byline.js"></script>
 <style>
   .tag{opacity:0}
   #tagB{left:64px} #tagA{right:64px}
@@ -42,6 +43,7 @@ const { $, prog, outExpo, inOutCubic, inOutSine, clamp, show } = M;
 const hookWords = M.words($("hook"), P.hook);
 $("plateK").textContent = P.methodLabel; $("plateV").textContent = P.method;
 EndCard.mount(P);
+Byline.mount(P);
 Captions.mount();
 // keep the method plate off the action. Crews film the wand tip from behind, so the tool sits
 // centre/low: plate goes high by default, low only when the action is clearly up top (rooflines, gutters)
@@ -101,7 +103,8 @@ window.seek = function (t) {
   window.__plan = { layers };
 
   // ---- graphics ----
-  M.riseWords(hookWords, t, 0.25, { out: T.hook, outDur: .35 });
+  M.riseWords(hookWords, t, -.12, { out: T.hook, outDur: .35 });
+  Byline.seek(t, .5, T.hook);
   $("hook").style.display = t < T.hook ? "block" : "none";
   // plate reads, then gets out of the way so the action clip can breathe
   const plateOut = Math.min(T.action, T.hook + .35 + M.readTime(P.methodLabel + " " + P.method) + .4);

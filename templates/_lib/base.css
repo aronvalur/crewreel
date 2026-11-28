@@ -48,3 +48,10 @@ body{font-family:"Crewreel Display",sans-serif;color:#fff;-webkit-font-smoothing
   letter-spacing:-1.5px;text-shadow:0 3px 30px rgba(0,0,0,.55),0 2px 6px rgba(0,0,0,.45)}
 .cap .w{transition:none}
 .cap .w.on{color:var(--accent)}
+/* Byline under the hook: logo tile + business name */
+.byline{position:absolute;left:80px;right:80px;display:flex;align-items:center;gap:18px;opacity:0}
+.byline .bl-logo{flex:none;width:58px;height:58px;border-radius:15px;background:var(--accent);color:#0b0e10;display:grid;place-items:center;
+  font-weight:800;font-size:28px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.3)}
+.byline .bl-logo img{width:100%;height:100%;object-fit:cover}
+.byline .bl-name{font-weight:650;font-size:36px;letter-spacing:-.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  text-shadow:0 2px 20px rgba(0,0,0,.5),0 1px 4px rgba(0,0,0,.4)}
