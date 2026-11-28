@@ -1,12 +1,11 @@
 # Render host (docs/DECISIONS.md): GitHub Actions. This workflow renders every template from
 # placeholder footage with the stock voiceover and attaches the reels, so every change to the
 # render pipeline can be watched, not just tested. Later: render customer jobs from a bucket.
+# Manual only (the nightly run dispatches it once at the end): ~12 min a go, and the free 2,000
+# Actions minutes a month are for customer reels (docs/DECISIONS.md, run 8).
 name: render-samples
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: ["render/**", "templates/**", "assets/**", ".github/workflows/render.yml"]
 
 concurrency:
   group: render-samples
