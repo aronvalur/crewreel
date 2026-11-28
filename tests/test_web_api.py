@@ -179,3 +179,62 @@ def test_guided_camera_films_keeps_and_sends_clips(server, tmp_path):
     assert job["status"] == "queued" and job["files"]["before"].startswith("before.") and job["files"]["after"].startswith("after.")
     assert (data / "jobs" / jid / "in" / job["files"]["before"]).stat().st_size > 20_000   # real video bytes
     assert out["cleared"] == 0, out                                 # sent clips are forgotten on the phone
+
+
+@pytest.fixture(scope="module")
+def locked(tmp_path_factory):
+    """Same build, started with CREWREEL_PASSWORD: everything but the quote page needs the sign-in cookie."""
+    data = tmp_path_factory.mktemp("locked")
+    s = socket.socket(); s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]; s.close()
+    env = {**os.environ, "CREWREEL_DATA": str(data), "CREWREEL_PASSWORD": "hunter2-long", "CREWREEL_INSECURE_COOKIE": "1"}
+    p = subprocess.Popen(["npx", "next", "start", "-p", str(port)], cwd=WEB, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    base = f"http://127.0.0.1:{port}"
+    for _ in range(60):
+        try:
+            urllib.request.urlopen(base + "/q", timeout=1); break
+        except Exception:
+            time.sleep(.5)
+    yield base, data
+    p.terminate(); p.wait()
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *a, **k):
+        return None
+
+
+def test_password_protects_the_app_but_not_the_quote_page(locked):
+    base, data = locked
+    op = urllib.request.build_opener(NoRedirect)
+    def status(path, cookie=None):
+        req = urllib.request.Request(base + path, headers={"Cookie": cookie} if cookie else {})
+        try:
+            return op.open(req).status
+        except urllib.error.HTTPError as e:
+            return e.code
+    assert status("/") == 307 and status("/quotes") == 307 and status("/api/jobs") == 401
+    assert status("/q") == 200
+    assert call(base, "POST", "/api/leads", {"name": "Ann", "contact": "ann@example.com"})[0] == 201
+    assert status("/api/files/20261126-deadbeef/poster.jpg") == 404          # public route, just no such file
+    assert status("/api/files/20261126-deadbeef/reel.mp4") == 401           # reels need sign-in
+    assert status("/", "cr_session=9999999999999.forged") == 307
+    js = """
+    const { chromium } = require('playwright');
+    (async () => {
+      const base = process.argv.at(-1); const b = await chromium.launch(); const p = await b.newPage();
+      await p.goto(base + '/quotes'); await p.fill('input[name=password]', 'wrong'); await p.click('button[type=submit]');
+      await p.waitForSelector('.error'); const bad = p.url();
+      await p.fill('input[name=password]', 'hunter2-long'); await p.click('button[type=submit]');
+      await p.waitForURL(/\\/quotes$/); const h = await p.textContent('h1');
+      console.log(JSON.stringify({ bad, h })); await b.close();
+    })();"""
+    r = subprocess.run(["node", "-e", js, base], capture_output=True, text=True, cwd=ROOT, timeout=60)
+    assert r.returncode == 0, r.stderr[-1200:]
+    out = json.loads(r.stdout)
+    assert "bad=1" in out["bad"] and out["h"] == "Quote requests"
+
+
+def test_clip_upload_route_checks_sign_in_itself(locked):
+    base, _ = locked
+    code, body = call(base, "PUT", "/api/drafts/20261126-deadbeef/before?name=b.mp4", b"x" * 10, "application/octet-stream")
+    assert code == 401

@@ -70,7 +70,7 @@ main.wrap { padding-top: 32px; padding-bottom: 80px; }
 label.field { display: block; }
 label.field > span { display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px; }
 label.field > small { display: block; color: var(--muted); font-size: 13px; margin-top: 6px; }
-input[type=text], input[type=url], textarea { width: 100%; font: inherit; color: inherit; background: var(--surface);
+input[type=text], input[type=url], input[type=password], textarea { width: 100%; font: inherit; color: inherit; background: var(--surface);
   border: 1px solid var(--line-strong); border-radius: 10px; padding: 10px 12px; }
 textarea { resize: vertical; min-height: 72px; }
 input:focus, textarea:focus, .choice:focus-within, .drop:focus-within { outline: 2px solid var(--ink); outline-offset: 1px; }

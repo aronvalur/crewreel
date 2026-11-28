@@ -6,12 +6,17 @@ import path from "path";
 import { getJob, jobDir } from "@/lib/store";
 import { TEMPLATES } from "@/lib/templates";
 import { MAX_BYTES, PHOTO_EXT, VIDEO_EXT } from "@/lib/upload";
+import { COOKIE, authOn, validSession } from "@/lib/session";
 
 export const runtime = "nodejs";
 
 const SLOTS = new Set(TEMPLATES.flatMap(t => t.slots.map(s => s.name)));
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string; slot: string }> }) {
+  // middleware skips this route (it would buffer the whole clip in memory), so check the sign-in here
+  if (authOn() && !(await validSession(req.headers.get("cookie")?.match(new RegExp(`(?:^|; )${COOKIE}=([^;]+)`))?.[1]))) {
+    return NextResponse.json({ error: "Sign in again." }, { status: 401 });
+  }
   const { id, slot } = await params;
   let job = null;
   try { job = await getJob(id); } catch { /* bad id */ }
