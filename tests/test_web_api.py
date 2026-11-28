@@ -213,7 +213,7 @@ def test_password_protects_the_app_but_not_the_quote_page(locked):
         except urllib.error.HTTPError as e:
             return e.code
     assert status("/") == 307 and status("/quotes") == 307 and status("/api/jobs") == 401
-    assert status("/q") == 200
+    assert status("/q") == 200 and status("/manifest.webmanifest") == 200 and status("/icons/icon-192.png") == 200
     assert call(base, "POST", "/api/leads", {"name": "Ann", "contact": "ann@example.com"})[0] == 201
     assert status("/api/files/20261126-deadbeef/poster.jpg") == 404          # public route, just no such file
     assert status("/api/files/20261126-deadbeef/reel.mp4") == 404           # public proof, just no such file
