@@ -216,7 +216,8 @@ def test_password_protects_the_app_but_not_the_quote_page(locked):
     assert status("/q") == 200
     assert call(base, "POST", "/api/leads", {"name": "Ann", "contact": "ann@example.com"})[0] == 201
     assert status("/api/files/20261126-deadbeef/poster.jpg") == 404          # public route, just no such file
-    assert status("/api/files/20261126-deadbeef/reel.mp4") == 401           # reels need sign-in
+    assert status("/api/files/20261126-deadbeef/reel.mp4") == 404           # public proof, just no such file
+    assert status("/api/files/20261126-deadbeef/feed.mp4") == 401           # everything else needs sign-in
     assert status("/", "cr_session=9999999999999.forged") == 307
     js = """
     const { chromium } = require('playwright');

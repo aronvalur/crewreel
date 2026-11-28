@@ -37,10 +37,11 @@ export function passwordOk(given: string) {
   return diff === 0;
 }
 
-// What homeowners may reach without signing in: the quote page, its form post, reel posters.
+// What homeowners may reach without signing in: the quote page, its form post, finished reels + posters
+// (they're the proof on the quote page; ids are unguessable and the reels are made to be posted publicly).
 export function isPublic(path: string, method: string) {
   return path === "/q" || path === "/login" ||
     (path === "/api/leads" && method === "POST") ||
-    /^\/api\/files\/[a-z0-9-]{6,40}\/poster\.jpg$/.test(path) ||
+    /^\/api\/files\/[a-z0-9-]{6,40}\/(poster\.jpg|reel\.mp4)$/.test(path) ||
     path.startsWith("/_next/") || path.startsWith("/fonts/") || path === "/favicon.ico";
 }

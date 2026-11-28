@@ -183,3 +183,10 @@ label.check { display: flex; gap: 12px; align-items: flex-start; cursor: pointer
 label.check input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--ink); flex: none; }
 label.check b { display: block; font-weight: 600; }
 label.check small { display: block; font-size: 14px; }
+button.q-shot { position: relative; border: 0; padding: 0; cursor: pointer; display: block; }
+.q-play { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%;
+  background: rgba(0,0,0,.45); backdrop-filter: blur(6px); }
+.q-play::after { content: ""; position: absolute; left: 17px; top: 13px; border-left: 14px solid #fff; border-top: 9px solid transparent; border-bottom: 9px solid transparent; }
+.q-watch { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.9); display: grid; place-items: center; padding: 16px; }
+.q-watch video { max-width: 100%; max-height: 100%; aspect-ratio: 9 / 16; border-radius: 14px; background: #000; }
+.q-close { position: absolute; top: max(16px, env(safe-area-inset-top)); right: 16px; color: #fff; }

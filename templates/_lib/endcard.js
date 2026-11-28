@@ -74,7 +74,7 @@ window.EndCard = (() => {
     const at = 1.2 + e * .3;          // tiny drift keeps the proof alive; stays early so short clips needn't slow down
     const [x, y0, w, h] = BOX, y = y0 + DY, dy = (1 - k) * 40, s = .96 + .04 * k;
     const box = [x + w * (1 - s) / 2, y + dy + h * (1 - s) / 2, w * s, h * s];
-    const L = [{ src: 'after', t: at, zoom: 1.12, blur: 40, dim: .62 },
+    const L = [{ src: 'after', t: at, zoom: 1.12, blur: 64, dim: .66 },   // soft enough that windows/doors don't ghost behind the text
                { color: '#000000', alpha: .45 * k, box: [box[0], box[1] + 24, box[2], box[3]], radius: R, boxFeather: 60 }];
     const inCard = { t: at, box, radius: R, zoom: 1.15, fx: f.fx, fy: f.fy, alpha: k, feather: 1.5 };
     if (P.aligned !== false) {

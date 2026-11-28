@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { getProfile, listJobs } from "@/lib/store";
 import { SERVICES } from "@/lib/leads";
 import QuoteForm from "./form";
+import Work from "./work";
 
 export const dynamic = "force-dynamic";
 
@@ -38,11 +39,7 @@ export default async function QuotePage({ searchParams }: { searchParams: Promis
       {work.length > 0 && (
         <section aria-label="Recent work">
           <p className="q-k">Recent work</p>
-          <div className="q-strip">
-            {work.map(j => (
-              <div key={j.id} className="q-shot"><img src={`/api/files/${j.id}/poster.jpg`} alt={j.title} loading="lazy" /></div>
-            ))}
-          </div>
+          <Work items={work.map(j => ({ id: j.id, title: j.title }))} />
         </section>
       )}
 

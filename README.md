@@ -12,6 +12,9 @@ python scripts/gen_placeholder.py siding footage/house
 python render/render.py templates/house-wash footage/house out/house.mp4 --params my-business.json
 python scripts/gen_placeholder.py roof footage/roof
 python render/render.py templates/roof footage/roof out/roof.mp4 --vo-take assets/vo/roof_blain.mp3
+python scripts/gen_placeholder.py glass footage/windows
+python render/render.py templates/windows footage/windows out/windows.mp4 --vo-take assets/vo/windows_blain.mp3
+python render/render.py templates/windows footage/windows out/windows-feed.mp4 --frame feed   # 4:5 feed post
 pytest -q                     # unit + template tests (+ a 2 s end-to-end render)
 ```
 Footage folder: `before`, `after`, `action1..3` (.mp4/.mov/.webm/.mkv or .jpg/.png/.webp for stills), any orientation,
@@ -28,17 +31,23 @@ Remote mode (`worker/remote.py` + `.github/workflows/render-job.yml`): clips go 
 pre-release `job-<id>`, the workflow renders and puts the reel back, the worker downloads it and deletes the
 release. Token needs Contents + Actions write on this repo. Self-test without a token: dispatch `render-job`
 with `selftest: true` (placeholder footage, reel as an artifact).
-Contractor flow: Business (name, area, quote link, colour) → New reel (pick style, add clips with shot guidance,
-optional words; upload shows progress) → job page polls while rendering → reel, poster, ready-to-paste caption,
-and "For next time" re-shoot tips. Jobs live in `data/` (`CREWREEL_DATA`): plain folders + JSON, written atomically,
+Contractor flow: Business (name, area, quote link, colour, Google review link) → New reel (pick style; film each
+shot with the guided camera — level, upright check, length timer, the before as a ghost for the after — or pick
+clips; clips stay on the phone until sent; optional 4:5 feed version) → job page polls while rendering → reel,
+feed version, poster, caption, Google Business post, review-request text, "For next time" re-shoot tips.
+Homeowners land on the public quote page `/q` (the reel's link, `?r=<reel>` in captions) → requests show under
+Quotes with the reel that brought them. Set `CREWREEL_PASSWORD` to require sign-in for everything except `/q`,
+the quote form post and reel posters (unset = open, for local use). `CREWREEL_PUBLIC_HOST` = the host shown on
+end cards and in links. Jobs live in `data/` (`CREWREEL_DATA`): plain folders + JSON, written atomically,
 claimed by the worker with an O_EXCL lock. Swap for Postgres + a bucket when it goes online.
 
 ## How a template works
 `templates/<name>/index.html` is a deterministic HTML composition (no timers, no CSS animation):
-- `window.META` — fps, duration, footage `sources`, `cuts` (whoosh), `impacts` (thump), `vo` lines.
+- `window.META` — fps, duration, footage `sources`, `cuts` (whoosh), `impacts` (thump), `vo` lines, `sfx` (reveal foley: squeegee, rinse).
 - `window.seek(t)` — draws the graphics for time t **and** sets `window.__plan.layers`: which footage goes underneath
   (`src`, clip time `t`, `zoom`/`fx`/`fy` Ken Burns, `mask` (horizontal) / `vmask` (vertical) + `feather` split, `alpha`, `blur`, `dim`).
-- `PARAMS` (business, accent, url, hook, method, vo…) are injected per job; the renderer adds `aligned` and
+- `PARAMS` (business, accent, url, hook, method, vo, frame…) are injected per job; text positions come from
+  `M.safe(P)` (reel UI zones or the 4:5 feed band), so one template serves both outputs; the renderer adds `aligned` and
   `activity` (per-clip motion profile; `M.quietZone` uses it to keep text off the action).
 - Fonts are bundled in `templates/_lib/fonts` (Inter Display, OFL) so every machine sets identical type.
 
