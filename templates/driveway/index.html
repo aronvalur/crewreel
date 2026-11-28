@@ -7,32 +7,36 @@
 <style>
   .tag{opacity:0}
   #tagB{left:64px} #tagA{right:64px}
+  #label{position:absolute;left:80px;bottom:600px;font-weight:650;font-size:30px;letter-spacing:5px;text-transform:uppercase;
+    padding:14px 22px 13px;border-radius:12px;background:rgba(12,14,16,.5);backdrop-filter:blur(12px)}
 </style>
 </head>
 <body>
 <div id="scrim" class="layer scrim"></div>
 <div id="hook" class="hook"></div>
 <div id="plate" class="plate"><div class="k" id="plateK"></div><div class="v" id="plateV"></div></div>
+<div id="label"></div>
 <div id="tagB" class="tag">Before</div><div id="tagA" class="tag">After</div>
 <div id="divider" class="divider"><div class="handle"><svg viewBox="0 0 44 44" fill="none" stroke="#0b0e10" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 13l-8 9 8 9M27 13l8 9-8 9"/></svg></div></div>
 <script>
 // Template 1 — "Driveway Before/After" (9:16, 15 s)
-// 0–3 s hook over before (push-in) · 3–8 s action clip + method plate · 8–12 s split reveal · 12–15 s end card
+// 0–2.8 s hook over before (push-in) · 2.8–6.8 s action clip + method plate · 6.8–10.4 s split reveal ·
+// 10.4–12 s up-close wipe where the clean-up shows most · 12–15 s end card
 const P = Object.assign({
   accent: "#7FD1FF", business: "Valur Exterior Cleaning", initials: "V", area: "Reykjavík & Kópavogur",
   url: "crewreel.app/q/valur", hook: "8 years of grime.\n*Gone* in one morning.",
   methodLabel: "The method", method: "Surface clean + soft rinse. No harsh chemicals.",
   aligned: true,
   vo: [
-    { at: 0.4, text: "Eight years of grime on this driveway." },
-    { at: 3.4, text: "Surface cleaner, then a soft rinse. No harsh chemicals." },
-    { at: 8.6, text: "Same morning.", caption: true },   // only line not already on screen
+    { at: 0.35, text: "Eight years of grime on this driveway." },
+    { at: 3.1, text: "Surface cleaner, then a soft rinse. No harsh chemicals." },
+    { at: 7.3, text: "Same morning.", caption: true },   // only line not already on screen
     { at: 12.4, text: "Get your free quote at the link." }
   ]
 }, window.PARAMS || {});
-const T = { hook: 3.0, action: 8.0, reveal: 12.0, total: 15.0 };
+const T = { hook: 2.8, action: 6.8, reveal: 10.4, close: 12.0, total: 15.0 };
 window.META = { fps: 30, duration: T.total, sources: ["before", "after", "action1"],
-  cuts: [T.hook, T.action, T.reveal], impacts: [T.action + 0.05], vo: P.vo };
+  cuts: [T.hook, T.action, T.reveal, T.close], impacts: [T.action + 0.05], vo: P.vo };
 document.documentElement.style.setProperty("--accent", P.accent);
 const { $, prog, outExpo, inOutCubic, inOutSine, clamp, show } = M;
 const hookWords = M.words($("hook"), P.hook);
@@ -82,8 +86,17 @@ window.seek = function (t) {
       layers.push({ src: "after", t: 1.5, zoom: 1.02 + .03 * r, alpha: k });
       window.__x = null;
     }
+  } else if (t < T.close) {
+    // up close where the change is biggest: the grime wipes off under the viewer's eyes
+    const f = M.focusAt(P, 0, { fx: .5, fy: .62 }), s = T.reveal;
+    const base = { zoom: 1.65 + .12 * inOutSine(prog(t, s, T.close)), fx: f.fx, fy: f.fy };
+    if (P.aligned) {
+      const k = inOutCubic(prog(t, s + .15, s + .95));
+      layers.push({ src: "before", t: 2.2 + (t - s) * .5, ...base });
+      layers.push({ src: "after", t: 2.2 + (t - s) * .5, ...base, mask: [-1, -.2 + 1.4 * k], feather: 180 });
+    } else layers.push({ src: "after", t: 2.2 + (t - s) * .5, ...base });
   } else {
-    layers.push(...EndCard.layers(t, T.reveal));
+    layers.push(...EndCard.layers(t, T.close));
   }
   window.__plan = { layers };
 
@@ -111,9 +124,15 @@ window.seek = function (t) {
     const k = inReveal ? inOutSine(prog(t, T.action + .6, T.action + 1.8)) : 0;
     $("tagB").style.opacity = tagK * (1 - k); $("tagA").style.opacity = tagK * k;
   }
-  $("scrim").style.opacity = t < T.reveal ? 1 : 0;
+  const inClose = t >= T.reveal && t < T.close;
+  $("label").style.display = inClose ? "block" : "none";
+  if (inClose) {
+    $("label").textContent = P.closeLabel || "Up close";
+    show($("label"), outExpo((t - T.reveal - .15) / .45) * (1 - prog(t, T.close - .2, T.close)), 16);
+  }
+  $("scrim").style.opacity = t < T.close ? 1 : 0;
   Captions.seek(t, P.voTiming, P.vo);
-  EndCard.seek(t, T.reveal);
+  EndCard.seek(t, T.close);
 };
 window.seek(0);
 </script></body></html>
