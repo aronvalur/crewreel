@@ -14,7 +14,7 @@ import json, os, time, urllib.error, urllib.parse, urllib.request
 
 API = os.environ.get("GITHUB_API", "https://api.github.com")
 WORKFLOW = "render-job.yml"
-OUTPUTS = ("reel.mp4", "poster.jpg", "reel.footage.json")
+OUTPUTS = ("reel.mp4", "poster.jpg", "reel.footage.json", "feed.mp4")
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -100,7 +100,7 @@ def ship(gh, job_dir, job, params_file):
             gh.upload(rel, os.path.join(ind, f))
     if "params.json" not in have:
         gh.upload(rel, params_file, "params.json")
-    gh.dispatch({"job_id": job["id"], "template": job["template"]})
+    gh.dispatch({"job_id": job["id"], "template": job["template"], **({"feed": "true"} if job.get("feed") else {})})
     return {"host": "github", "tag": tag, "release": rel["id"], "shippedAt": time.time()}
 
 

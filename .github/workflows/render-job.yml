@@ -9,6 +9,7 @@ on:
       job_id: { description: "Job id", required: true, type: string }
       template: { description: "Reel style", required: true, type: string }
       selftest: { description: "Placeholder footage, result as artifact (no release)", type: boolean, default: false }
+      feed: { description: "Also render the 4:5 feed version", type: boolean, default: false }
 
 permissions:
   contents: write
@@ -58,13 +59,24 @@ jobs:
           python render/render.py "templates/${{ inputs.template }}" job/in job/out/reel.mp4 \
             --params job/params.json "${VO[@]}" 2>&1 | tee job/render.log
           python -c "import sys; sys.path.insert(0,'worker'); import worker; worker.make_poster('job/out/reel.mp4', '${{ inputs.template }}', 'job/out/poster.jpg')"
+      - name: Feed version (4:5)
+        if: inputs.feed
+        continue-on-error: true          # the reel stands on its own
+        run: |
+          TAKE="assets/vo/${{ inputs.template }}_blain.mp3"
+          VO=(); [ -f "$TAKE" ] && VO=(--vo-take "$TAKE")
+          python render/render.py "templates/${{ inputs.template }}" job/in job/out/feed.mp4 \
+            --params job/params.json "${VO[@]}" --frame feed
       - name: Self-test result
         if: inputs.selftest
         uses: actions/upload-artifact@v4
         with: { name: "selftest-${{ inputs.template }}", path: job/out/*, retention-days: 7 }
       - name: Return reel
         if: ${{ !inputs.selftest }}
-        run: gh release upload "$TAG" job/out/reel.mp4 job/out/reel.footage.json job/out/poster.jpg --clobber
+        # feed first: the web box treats reel + poster as "done", so they must land last
+        run: |
+          [ -f job/out/feed.mp4 ] && gh release upload "$TAG" job/out/feed.mp4 --clobber
+          gh release upload "$TAG" job/out/reel.footage.json job/out/reel.mp4 job/out/poster.jpg --clobber
       - name: Report failure
         if: failure() && !inputs.selftest
         run: |

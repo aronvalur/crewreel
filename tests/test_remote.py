@@ -178,3 +178,18 @@ def test_lost_release_fails_the_job(tmp_path, monkeypatch):
     fake.releases.clear()
     worker.remote_step(gh)
     assert json.loads((d / "job.json").read_text())["status"] == "failed"
+
+
+def test_feed_version_travels_with_the_job(tmp_path, monkeypatch):
+    fake = FakeGitHub()
+    gh = remote.GitHub("o/r", "t0k", api=f"http://127.0.0.1:{fake.port}")
+    d = setup_job(tmp_path, monkeypatch)
+    jf = d / "job.json"; jf.write_text(json.dumps({**json.loads(jf.read_text()), "feed": True}))
+    worker.remote_step(gh)
+    assert fake.dispatches[-1]["inputs"]["feed"] == "true"
+    rel = fake.rel(d.name)
+    for name, blob in (("feed.mp4", b"F" * 500), ("reel.mp4", b"R" * 500), ("poster.jpg", b"P" * 50)):
+        fake.add_asset(rel["id"], name, blob)                     # the workflow uploads feed first
+    worker.remote_step(gh)
+    assert json.loads(jf.read_text())["status"] == "done"
+    assert (d / "feed.mp4").read_bytes() == b"F" * 500
