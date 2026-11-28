@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getJob, getProfile, saveJob } from "@/lib/store";
 import { templateById } from "@/lib/templates";
-import { caption } from "@/lib/caption";
+import { caption, gbpPost, reviewText } from "@/lib/caption";
 import { statusText } from "@/lib/status";
 import { revalidatePath } from "next/cache";
 import Poll from "./poll";
@@ -51,6 +51,11 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
   }
 
   const text = caption(job, profile);
+  const texts = [
+    { title: "Caption", note: "Instagram, Facebook, TikTok.", body: text },
+    { title: "Google Business post", note: "Add it as an update with the poster image. Local searches see it.", body: gbpPost(job, profile) },
+    ...(profile.reviewUrl ? [{ title: "Review request", note: "Text it to the customer today, while they're happy.", body: reviewText(job, profile) }] : []),
+  ];
   return (
     <div className="player">
       <video src={`/api/files/${job.id}/reel.mp4`} poster={`/api/files/${job.id}/poster.jpg`} controls playsInline />
@@ -61,14 +66,20 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
         </div>
         <div className="row">
           <a className="btn" href={`/api/files/${job.id}/reel.mp4?download`}>Download reel</a>
+          <a className="btn ghost" href={`/api/files/${job.id}/poster.jpg?download`}>Poster image</a>
         </div>
-        <div className="card stack">
-          <div className="row" style={{ justifyContent: "space-between" }}>
-            <h2>Caption</h2>
-            <CopyButton text={text} />
+        {texts.map(t => (
+          <div key={t.title} className="card stack">
+            <div className="row" style={{ justifyContent: "space-between" }}>
+              <div><h2>{t.title}</h2><p className="muted small">{t.note}</p></div>
+              <CopyButton text={t.body} />
+            </div>
+            <p className="copy">{t.body}</p>
           </div>
-          <p className="copy">{text}</p>
-        </div>
+        ))}
+        {!profile.reviewUrl && (
+          <p className="muted small">Add your Google review link under <a href="/settings">Business</a> to get a ready-made review request for each job.</p>
+        )}
         {hints.length > 0 && (
           <div className="stack">
             <h2>For next time</h2>

@@ -43,7 +43,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ path: st
     "Accept-Ranges": "bytes",
     "Cache-Control": "private, max-age=60",
   };
-  if (download) headers["Content-Disposition"] = `attachment; filename="crewreel-${id}.mp4"`;
+  if (download) headers["Content-Disposition"] = `attachment; filename="crewreel-${id}${path.extname(name)}"`;
 
   const range = req.headers.get("range");
   const m = range && /bytes=(\d*)-(\d*)/.exec(range);

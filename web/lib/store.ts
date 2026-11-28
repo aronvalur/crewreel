@@ -33,6 +33,7 @@ export type Profile = {
   url: string;
   accent: string;
   cta: string;
+  reviewUrl?: string;                 // their Google review link (g.page/r/... or search.google.com/local/writereview?...)
 };
 
 export const DEFAULT_PROFILE: Profile = {

@@ -14,6 +14,7 @@ async function save(form: FormData) {
     url: s("url", 60).replace(/^https?:\/\//, ""),
     accent: /^#[0-9a-fA-F]{6}$/.test(accent) ? accent : "#7FD1FF",
     cta: s("cta", 32) || "Get a free quote",
+    reviewUrl: s("reviewUrl", 200).replace(/^(?!https?:\/\/)(?=.)/, "https://"),
   });
   redirect("/");
 }
@@ -38,6 +39,10 @@ export default async function Settings() {
       </label>
       <label className="field"><span>Call to action</span>
         <input type="text" name="cta" defaultValue={p.cta} maxLength={32} />
+      </label>
+      <label className="field"><span>Google review link</span>
+        <input type="text" name="reviewUrl" defaultValue={p.reviewUrl} placeholder="g.page/r/..." maxLength={200} />
+        <small>Optional. In Google Business Profile: Ask for reviews → copy link. We put it in a ready-made thank-you text for each job.</small>
       </label>
       <label className="field"><span>Brand colour</span>
         <input type="color" name="accent" defaultValue={p.accent} />

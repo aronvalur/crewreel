@@ -28,3 +28,26 @@ export function caption(job: Job, p: Profile) {
       .filter(Boolean).join(" "),
   ].join("\n");
 }
+
+// What the job was, in a customer's words (for texts to the customer and the Google post).
+const JOB_NOUN: Record<string, string> = { driveway: "driveway", "house-wash": "house", roof: "roof", windows: "windows" };
+const JOB_PLURAL: Record<string, string> = { driveway: "driveways", "house-wash": "houses", roof: "roofs", windows: "windows" };
+
+// Google Business Profile "update" post: no hashtags (they do nothing there), the result first, one link.
+export function gbpPost(job: Job, p: Profile) {
+  const field = (name: string) =>
+    flat(job.params[name] || templateById(job.template)?.fields.find(f => f.name === name)?.placeholder || "");
+  const lines = [field("result") || field("hook"), field("method")].filter(Boolean);
+  const where = p.area ? ` across ${p.area}` : "";
+  return `${lines.join(" ")}\n\nWe clean ${JOB_PLURAL[job.template] || "homes"}${where}. ` +
+    `${p.cta || "Get a free quote"}: ${quoteLink(p.url, job.id)}`;
+}
+
+// Text the crew sends the customer the same day, while they're happy. Only when there's a review link.
+export function reviewText(job: Job, p: Profile) {
+  if (!p.reviewUrl) return "";
+  const what = JOB_NOUN[job.template] || "place";
+  const plural = what.endsWith("s");
+  return `Hi, thanks for having ${p.business || "us"} clean your ${what} today. If you're happy with how ${plural ? "they" : "it"} turned out, ` +
+    `a quick Google review would help us a lot: ${p.reviewUrl}`;
+}
