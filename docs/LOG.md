@@ -113,12 +113,18 @@
 - Shipped Google Business post + review-request text per job (optional review link), poster download.
 - Shipped reveal foley (squeegee swish, roof rinse; meta.sfx), whooshes de-fizzed and 2 dB lower; hooks visible
   on frame 0; byline (logo + business name) under every hook.
+- Shipped **new-quote alerts** on the contractor's phone (Web Push; VAPID keys made on first use, no accounts) and
+  an installable app (manifest + icon) so iPhones can receive them from the home screen.
+- Shipped **template 5, Deck cleaning** (16.4 s): eight board bands wipe clean in a cascade with a wet sheen on each
+  edge; rinse foley; stock VO 183 credits (run total 367/400).
+- Verified end to end: New reel form (windows, feed on) → worker → reel + 4:5 feed + poster + texts on the job
+  page; remote path verified on GitHub (render-job self-test with feed: both files produced).
 - render-samples is now manual-only (auto on every push would have cost ~3,000 Actions min/month).
-- Tests: 55 → 73, all green locally; CI green.
+- Tests: 55 → 77, all green locally; CI green.
 - Self-check notes that changed direction: (a) after the windows template I picked the quote page over the
   4:5 feed because every reel's CTA pointed at a 404 — the product's promise is quote requests; (b) noticed
   render-samples per push would eat the free minutes meant for customer reels → manual; (c) once the quote
   page collected homeowners' phone numbers, sign-in jumped ahead of the feed version (no going online
   without it); (d) checked the foley by measurement (momentary loudness) since I can't listen.
 - Grade: B+ (up from B). The reel's last frame now sells, the job→reel→quote-request loop exists end to end
-  with attribution, four job types, feed format, guided filming. Still: no real footage, not online.
+  with attribution and phone alerts, five job types, feed format, guided filming. Still: no real footage, not online.

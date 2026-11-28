@@ -75,3 +75,6 @@ Every run reads this file and follows it. Reverse a decision only with a written
   FX peak −14 dBFS; whooshes band-limited to ≤4.5 kHz.
 - **Byline under every hook** (logo + business name): most viewers never reach the end card.
 - **No ElevenLabs music** for the bed: it would blow the 400-credit/run budget. Synth bed stays for now (NEXT #4).
+- **Quote alerts = Web Push first** (free, no accounts; VAPID keys in the data folder). Email/SMS later as fallback.
+- **Fifth template = Deck cleaning.** Reveal = board-by-board cascade (eight bands). Stock VO 183 credits; this run
+  spent 367 of the 400-credit budget.
