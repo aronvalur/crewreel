@@ -40,7 +40,7 @@ jobs:
       - name: Placeholder footage (self-test)
         if: inputs.selftest
         run: |
-          case "${{ inputs.template }}" in driveway) S=pavers;; house-wash) S=siding;; *) S=${{ inputs.template }};; esac
+          case "${{ inputs.template }}" in driveway) S=pavers;; house-wash) S=siding;; windows) S=glass;; *) S=${{ inputs.template }};; esac
           python scripts/gen_placeholder.py "$S" job/in
           echo '{"business":"Self Test Cleaning","area":"Reykjavík"}' > job/params.json
       - name: Fetch footage

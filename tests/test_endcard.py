@@ -50,7 +50,7 @@ def test_end_card_layout_fits_safe_zones_and_long_names():
     })();"""
     params = {"business": "Northern Lights Pressure Washing & Soft Wash Co", "area": "Greater Reykjavík",
               "url": "example.com/quote", "aligned": True}
-    for tpl in ("driveway", "house-wash", "roof"):
+    for tpl in ("driveway", "house-wash", "roof", "windows"):
         arg = json.dumps([f"{ROOT}/templates/{tpl}/index.html", params])
         r = json.loads(subprocess.run(["node", "-e", js, arg], capture_output=True, text=True, check=True,
                                       cwd=ROOT).stdout)

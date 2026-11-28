@@ -13,7 +13,7 @@ export type Slot = {
 export type Field = { name: string; label: string; placeholder: string; max: number; hint?: string };
 
 export type Template = {
-  id: "driveway" | "house-wash" | "roof";
+  id: "driveway" | "house-wash" | "roof" | "windows";
   title: string;
   length: string;
   blurb: string;
@@ -80,6 +80,26 @@ export const TEMPLATES: Template[] = [
         hint: "Wrap one word in *stars* to colour it." },
       { name: "method", label: "How you cleaned it", placeholder: "Soft wash, not pressure. Kills the algae, spares the shingles.", max: 70 },
       { name: "result", label: "Result line", placeholder: "Ridge to gutter.\nStreak-free.", max: 32 },
+    ],
+  },
+  {
+    id: "windows",
+    title: "Window cleaning",
+    length: "16 s",
+    blurb: "The spotted glass, scrub and squeegee, then a squeegee-pull reveal and a close-up.",
+    slots: [
+      { name: "before", min: 3, label: "Before", kind: "photo-or-video",
+        hint: "Straight at the window, phone upright, whole pane in frame. Hold still for 5 seconds." },
+      { name: "action1", min: 2.5, label: "Scrubbing", kind: "video", hint: "Scrubbing the glass with the applicator, 3–5 seconds." },
+      { name: "action2", min: 2.5, label: "Squeegee", kind: "video", hint: "One clean squeegee pull across the glass, 3–5 seconds." },
+      { name: "after", min: 3.5, label: "After", kind: "photo-or-video",
+        hint: "Same spot as the before shot, once the glass is dry. Hold still for 5 seconds." },
+    ],
+    fields: [
+      { name: "hook", label: "Opening line", placeholder: "Can't see out?\n*Now* you can.", max: 40,
+        hint: "Wrap one word in *stars* to colour it." },
+      { name: "method", label: "How you cleaned it", placeholder: "Pure water, scrub, squeegee. Frames and sills detailed.", max: 70 },
+      { name: "result", label: "Result line", placeholder: "Crystal clear.\nInside and out.", max: 32 },
     ],
   },
 ];

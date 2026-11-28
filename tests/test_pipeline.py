@@ -56,7 +56,7 @@ def test_audio_mix_without_vo(tmp_path):
     assert abs(d - 4) < .05
 
 
-@pytest.mark.parametrize("tpl,n", [("driveway", 3), ("house-wash", 5), ("roof", 4)])
+@pytest.mark.parametrize("tpl,n", [("driveway", 3), ("house-wash", 5), ("roof", 4), ("windows", 4)])
 def test_template_plan_is_deterministic(tmp_path, tpl, n):
     """Seeking the same t twice must give the same plan; sources must be declared."""
     js = f"""

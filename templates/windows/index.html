@@ -1,0 +1,168 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../_lib/base.css">
+<script src="../_lib/motion.js"></script>
+<script src="../_lib/endcard.js"></script>
+<script src="../_lib/captions.js"></script>
+<style>
+  /* the squeegee: rubber blade + metal channel riding the wipe edge, a wet sheen just ahead of it */
+  #blade{position:absolute;top:-40px;bottom:-40px;width:0}
+  #blade .ch{position:absolute;left:-22px;top:0;bottom:0;width:26px;border-radius:6px;
+    background:linear-gradient(90deg,#8d959c,#e9edf0 40%,#b6bcc2 70%,#6f777e);box-shadow:-6px 0 24px rgba(0,0,0,.28)}
+  #blade .rb{position:absolute;left:4px;top:0;bottom:0;width:9px;background:#101214}
+  #blade .wet{position:absolute;left:13px;top:0;bottom:0;width:90px;
+    background:linear-gradient(90deg,rgba(255,255,255,.55),rgba(255,255,255,.12) 35%,rgba(255,255,255,0));mix-blend-mode:screen}
+  #big{position:absolute;left:80px;right:80px;top:330px;font-weight:700;font-size:92px;line-height:1.02;letter-spacing:-3px;
+    text-shadow:0 2px 40px rgba(0,0,0,.45),0 2px 6px rgba(0,0,0,.35)}
+  .chip{position:absolute;top:330px;font-weight:650;font-size:30px;letter-spacing:5px;text-transform:uppercase;
+    padding:14px 22px 13px;border-radius:12px;background:rgba(12,14,16,.5);backdrop-filter:blur(12px)}
+  #tagA{left:64px} #tagB{right:64px}
+  #label{top:auto;bottom:600px;left:80px}
+  #step{position:absolute;right:80px;top:330px;font-weight:650;font-size:30px;letter-spacing:4px;color:rgba(255,255,255,.85)}
+</style>
+</head>
+<body>
+<div id="scrim" class="layer scrim"></div>
+<div id="hook" class="hook"></div>
+<div id="step"></div>
+<div id="plate" class="plate"><div class="k" id="plateK"></div><div class="v" id="plateV"></div></div>
+<div id="blade"><div class="wet"></div><div class="ch"></div><div class="rb"></div></div>
+<div id="tagA" class="chip">After</div><div id="tagB" class="chip">Before</div>
+<div id="big"></div>
+<div id="label" class="chip"></div>
+<script>
+// Template 4 — "Window Cleaning" (9:16, 16.4 s)
+// 0–2.6 hook over the spotted glass (slow push) · 2.6–7.4 scrub + squeegee clips, step labels, method plate
+// 7.4–11.8 squeegee wipe before→after (a blade pulled across the glass) + result line
+// 11.8–13.4 up-close wipe where the change is biggest · 13.4–16.4 end card
+const P = Object.assign({
+  accent: "#8FE3E0", business: "Valur Exterior Cleaning", initials: "V", area: "Reykjavík & Kópavogur",
+  url: "crewreel.app/q/valur", hook: "Can't see out?\n*Now* you can.",
+  methodLabel: "The method", method: "Pure water, scrub, squeegee. Frames and sills detailed.",
+  steps: ["Scrub", "Squeegee"],
+  result: "Crystal clear.\nInside and out.",
+  closeLabel: "Up close",
+  vo: [
+    { at: 0.3, text: "Can't see out of your windows anymore?" },
+    { at: 2.95, text: "Pure water, a scrub, then the squeegee, frames and sills included." },
+    { at: 9.4, text: "Crystal clear, inside and out." },
+    { at: 13.7, text: "Get a free quote at the link." }
+  ]
+}, window.PARAMS || {});
+const T = { hook: 2.6, a1: 5.0, action: 7.4, reveal: 11.8, close: 13.4, total: 16.4 };
+const W0 = T.action + .45, W1 = T.action + 1.75;        // the squeegee pull: quick and crisp
+window.META = { fps: 30, duration: T.total, sources: ["before", "after", "action1", "action2"],
+  cuts: [T.hook, T.a1, T.action, T.reveal, T.close], impacts: [W1 - .05], vo: P.vo };
+document.documentElement.style.setProperty("--accent", P.accent);
+const { $, prog, outExpo, inOutCubic, inOutSine, clamp, show } = M;
+const hookWords = M.words($("hook"), P.hook);
+const bigWords = M.words($("big"), P.result);
+$("plateK").textContent = P.methodLabel; $("plateV").textContent = P.method;
+$("label").textContent = P.closeLabel;
+EndCard.mount(P);
+Captions.mount();
+
+window.relayout = () => {                // re-run after web fonts load (overlay.js calls it)
+  // method plate: low by default (step label sits top right); high only if the action is low on the glass
+  const el = $("plate"), d = el.style.display;
+  el.style.display = "block"; el.style.top = ""; el.style.bottom = "";
+  const ph = el.offsetHeight;
+  const z = M.quietZone(M.activity(P, ["action1", "action2"]), [[400, 400 + ph], [1920 - 600 - ph, 1920 - 600]]);
+  if (z === 0) { el.style.bottom = "auto"; el.style.top = "400px"; }
+  el.style.display = d;
+  window.PLATE_ZONE = z;
+  // hook and result line over the calmest band (open glass or sky, not mullions and frames)
+  for (const [id, srcs] of [["hook", P.aligned ? ["before", "after"] : ["before"]], ["big", ["after"]]]) {
+    const e = $(id), dd = e.style.display;
+    e.style.display = "block"; e.style.top = "";
+    const h = e.offsetHeight, zz = M.calmZone(P, srcs, [[330, 330 + h], [1920 - 640 - h, 1920 - 640]]);
+    if (zz === 1) e.style.top = (1920 - 640 - h) + "px";
+    e.style.display = dd;
+    window[id.toUpperCase() + "_ZONE"] = zz;
+  }
+  $("scrim").classList.toggle("low", window.HOOK_ZONE === 1 || window.BIG_ZONE === 1);
+};
+window.relayout();
+
+window.seek = function (t) {
+  const L = [];
+  let wipeX = null;
+  if (t < T.hook) {
+    L.push({ src: "before", t, zoom: 1.04 + .08 * inOutSine(t / T.hook), fy: .5 });     // slow push into the spots
+  } else if (t < T.action) {
+    const i = t < T.a1 ? 0 : 1, s = i ? T.a1 : T.hook;
+    L.push({ src: "action" + (i + 1), t: t - s + .1, zoom: 1.03 + .04 * prog(t, s, s + 2.4) });
+  } else if (t < T.reveal) {
+    const ct = 1.5 + (t - T.action) * .4;
+    const k = inOutCubic(prog(t, W0, W1));
+    const push = 1.02 + .05 * inOutSine(prog(t, W1, T.reveal));
+    L.push({ src: "before", t: ct, zoom: push });
+    if (P.aligned) {
+      wipeX = -.06 + 1.12 * k;                         // blade starts just off-screen left, exits right
+      const a = { src: "after", t: ct, zoom: push };
+      if (k < 1) Object.assign(a, { mask: [-1, wipeX], feather: 6 });   // a squeegee leaves a crisp edge
+      L.push(a);
+    } else {
+      L.push({ src: "after", t: ct, zoom: push, alpha: k });          // no reliable alignment: soft crossfade
+    }
+  } else if (t < T.close) {
+    const f = M.focusAt(P, 0, { fx: .5, fy: .5 });
+    const base = { zoom: 1.6 + .15 * inOutSine(prog(t, T.reveal, T.close)), fx: f.fx, fy: f.fy };
+    if (P.aligned && (P.focus || []).length) {
+      const k = inOutCubic(prog(t, T.reveal + .2, T.reveal + .95));
+      L.push({ src: "before", t: 2.5 + (t - T.reveal) * .5, ...base });
+      L.push({ src: "after", t: 2.5 + (t - T.reveal) * .5, ...base, mask: [-1, -.1 + 1.2 * k], feather: 6 });
+    } else {
+      L.push({ src: "after", t: 2.5 + (t - T.reveal) * .5, ...base });
+    }
+  } else {
+    L.push(...EndCard.layers(t, T.close));
+  }
+  window.__plan = { layers: L };
+
+  M.riseWords(hookWords, t, .15, { out: T.hook, outDur: .3 });
+  $("hook").style.display = t < T.hook ? "block" : "none";
+
+  const inAct = t >= T.hook && t < T.action;
+  $("plate").style.display = inAct ? "block" : "none";
+  const plateOut = Math.min(T.action, T.hook + .3 + M.readTime(P.methodLabel + " " + P.method) + .4);
+  show($("plate"), outExpo((t - T.hook - .3) / .55) * (1 - inOutSine(prog(t, plateOut - .4, plateOut))), 28);
+  $("step").style.display = inAct ? "block" : "none";
+  if (inAct) {
+    const i = t < T.a1 ? 0 : 1, s = i ? T.a1 : T.hook, e = i ? T.action : T.a1;
+    $("step").textContent = `0${i + 1} — ${P.steps[i]}`.toUpperCase();
+    show($("step"), outExpo((t - s - .1) / .4) * (1 - prog(t, e - .2, e)), 16);
+  }
+
+  // the blade rides the wipe edge (main reveal and the up-close pass)
+  let bx = null, bk = 0;
+  if (wipeX !== null) { bk = prog(t, W0, W1); bx = wipeX; }
+  else if (t >= T.reveal && t < T.close && P.aligned && (P.focus || []).length) {
+    bk = prog(t, T.reveal + .2, T.reveal + .95); bx = -.1 + 1.2 * inOutCubic(bk);
+  }
+  $("blade").style.display = bx !== null && bk > 0 && bk < 1 ? "block" : "none";
+  if (bx !== null) $("blade").style.left = bx * 1080 + "px";
+
+  // tags: AFTER (left) appears once the blade has passed it, BEFORE (right) until the blade reaches it
+  const inRev = t >= T.action && t < T.reveal;
+  const tagK = inRev ? outExpo((t - T.action - .15) / .45) : 0;
+  const x = wipeX === null ? (P.aligned ? 2 : -1) : wipeX * 1080;
+  const fade = P.aligned ? 1 : inOutSine(prog(t, W0, W1));
+  const aw = $("tagA").offsetWidth, bw = $("tagB").offsetWidth;
+  $("tagA").style.opacity = tagK * (P.aligned ? clamp((x - 64 - aw - 20) / 60) : fade) * (1 - prog(t, W1, W1 + .3));
+  $("tagB").style.opacity = tagK * (P.aligned ? clamp((1080 - 64 - bw - 20 - x) / 60) : 1 - fade) * (1 - prog(t, W1, W1 + .3));
+  $("tagA").style.display = $("tagB").style.display = inRev ? "block" : "none";
+
+  M.riseWords(bigWords, t, W1 + .25, { out: T.reveal, outDur: .3 });
+  $("big").style.display = inRev ? "block" : "none";
+
+  const inClose = t >= T.reveal && t < T.close;
+  $("label").style.display = inClose ? "block" : "none";
+  if (inClose) show($("label"), outExpo((t - T.reveal - .15) / .45) * (1 - prog(t, T.close - .2, T.close)), 16);
+
+  $("scrim").style.opacity = t < T.close ? 1 : 0;
+  Captions.seek(t, P.voTiming, P.vo);
+  EndCard.seek(t, T.close);
+};
+window.seek(0);
+</script></body></html>
