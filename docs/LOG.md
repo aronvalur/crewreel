@@ -83,3 +83,42 @@
 - Grade: B (up from B−). Three job types, close-ups and text placement now driven by the actual footage, and
   rendering can run on free GitHub runners from a web box. Still not online (needs a bucket), still no real
   customer footage.
+
+## 2026-11-28 — run 8 (nightly)
+- Self-review: 55 tests green (after fixing a sandbox-only Playwright mismatch, no repo change); rendered all three
+  templates on placeholder footage and read frames. Weakest: (1) end card — dead lower half, ghosted blurred
+  footage behind the logo, CTA only in the last ~1.5 s, i.e. the conversion frame was the weakest frame;
+  (2) driveway sat on one 5 s action clip with nothing happening; (3) no window-cleaning reel although window
+  cleaners are a third of the target market — and the reel's CTA link pointed at a page that didn't exist.
+- Shipped **end card rebuilt for conversion**: before|after proof card (compositor `box` layers: footage
+  cover-cropped into a rounded card on the focus point, soft shadow), logo + name row, big accent CTA button
+  readable by 0.8 s with one pulse, URL. Long names shrink then wrap to two lines (tested). Default CTA copy
+  "Get a free quote".
+- Shipped **driveway re-paced**: 4 s action, then an up-close wipe at the focus point; VO lines re-timed from the
+  cached take (0 credits).
+- Shipped **template 4, Window cleaning** (16.4 s): spotted-glass hook, scrub + squeegee steps, a crisp wipe
+  ridden by a drawn squeegee (rubber blade, channel, wet sheen), up-close squeegee pass, end card. Stock VO
+  (Blain, 184 credits; 11,111 left before). Glass placeholder footage. Wired into web, worker, CI, remote.
+- Shipped **quote page `/q` + Quotes inbox**: proof strip (tap to watch), service chips, name / phone-or-email /
+  address / notes, honeypot; requests stored with the reel that sent them (`?r=<reel>` in captions);
+  per-reel tally; nav badge. Captions/end cards default to the built-in page.
+- Shipped **guided camera** in the New reel form: viewfinder with shot hint, thirds, level line, upright and
+  steady nudges, a length ring that turns green when the slot is covered, before-as-ghost for the after shot;
+  clips persist on the phone (IndexedDB) so the after can be filmed hours later. E2E test with a fake camera.
+- Shipped **4:5 feed version**: templates take text safe zones from `M.safe(P)`; `--frame feed` crops the
+  composite to 1080x1350; opt-in per job; works in local and remote (GitHub) rendering. Test: every visible
+  text element stays inside the crop across all four reels.
+- Shipped **sign-in** (CREWREEL_PASSWORD, signed cookie; quote page, form post, reels and posters public).
+  Upload route checks the cookie itself (middleware would buffer 500 MB bodies — caught by the streaming test).
+- Shipped Google Business post + review-request text per job (optional review link), poster download.
+- Shipped reveal foley (squeegee swish, roof rinse; meta.sfx), whooshes de-fizzed and 2 dB lower; hooks visible
+  on frame 0; byline (logo + business name) under every hook.
+- render-samples is now manual-only (auto on every push would have cost ~3,000 Actions min/month).
+- Tests: 55 → 73, all green locally; CI green.
+- Self-check notes that changed direction: (a) after the windows template I picked the quote page over the
+  4:5 feed because every reel's CTA pointed at a 404 — the product's promise is quote requests; (b) noticed
+  render-samples per push would eat the free minutes meant for customer reels → manual; (c) once the quote
+  page collected homeowners' phone numbers, sign-in jumped ahead of the feed version (no going online
+  without it); (d) checked the foley by measurement (momentary loudness) since I can't listen.
+- Grade: B+ (up from B). The reel's last frame now sells, the job→reel→quote-request loop exists end to end
+  with attribution, four job types, feed format, guided filming. Still: no real footage, not online.

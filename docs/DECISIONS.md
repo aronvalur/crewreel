@@ -51,3 +51,27 @@ Every run reads this file and follows it. Reverse a decision only with a written
   it; placeholder footage per surface (pavers, siding, roof) covers tests, real clips come from Aron.
 - **Pre-upload footage check** in the web form uses the renderer's rules (min seconds per slot, sideways, low
   res) and warns, never blocks.
+
+## Run 8 (2026-11-28)
+- **End card = proof + one action.** Before|after proof card (footage drawn by the compositor in a rounded box at
+  the focus point), logo + name row, a full-width accent CTA button readable by 0.8 s. Default CTA copy is an
+  action: "Get a free quote". Background after-frame blurred hard (no ghosting of windows/doors).
+- **Driveway** = 2.8 s hook, 4 s action, 3.6 s split, 1.6 s up-close wipe, 3 s end card. VO re-timed, no new take.
+- **Fourth template = Window cleaning** (third trade in the one-liner). Signature reveal: a squeegee pulled across
+  the glass (crisp edge, drawn blade). Stock VO take 184 credits (budget kept: ≤400/run, 11,111 left before).
+- **render-samples runs on manual dispatch only.** Every run dispatches it once at the end. Free Actions minutes
+  (2,000/month) are for customer reels.
+- **Built-in quote page** (`/q`) is the default destination of every reel (end card shows `<host>/q`, captions
+  carry `?r=<reel>`). A contractor's own quote URL still wins if set. Leads are files in `data/leads/` until
+  Postgres. Unknown `?r` ids are dropped. Honeypot, no captcha (friction kills conversions).
+- **Sign-in before going online:** one password per deployment (`CREWREEL_PASSWORD`, HMAC-signed cookie, 60 days).
+  Public: `/q`, `POST /api/leads`, finished reels and posters (they're made to be posted; ids unguessable).
+  Real accounts come with multi-tenancy.
+- **Guided camera in the browser**, not a native app: MediaRecorder, no audio (the reel replaces it), clips kept in
+  IndexedDB for 3 days so before/after can be filmed hours apart; the before frame is the ghost for the after.
+- **4:5 feed version = layout via safe zones, then crop** (band y 285..1635 of the 9:16 canvas). One template serves
+  both; opt-in per job because it doubles render minutes.
+- **Foley:** synthesised reveal sounds (squeegee, rinse) via `meta.sfx`, kept ~6–10 dB under the voice;
+  FX peak −14 dBFS; whooshes band-limited to ≤4.5 kHz.
+- **Byline under every hook** (logo + business name): most viewers never reach the end card.
+- **No ElevenLabs music** for the bed: it would blow the 400-credit/run budget. Synth bed stays for now (NEXT #4).
