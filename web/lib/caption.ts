@@ -8,6 +8,7 @@ const TAGS: Record<string, string[]> = {
   "house-wash": ["#softwash", "#housewashing", "#beforeandafter"],
   roof: ["#roofcleaning", "#softwash", "#beforeandafter"],
   windows: ["#windowcleaning", "#cleanwindows", "#beforeandafter"],
+  deck: ["#deckcleaning", "#deckrestoration", "#beforeandafter"],
 };
 
 const flat = (s: string) => s.replace(/\*/g, "").replace(/\s*\n\s*/g, " ").trim();
@@ -30,8 +31,8 @@ export function caption(job: Job, p: Profile) {
 }
 
 // What the job was, in a customer's words (for texts to the customer and the Google post).
-const JOB_NOUN: Record<string, string> = { driveway: "driveway", "house-wash": "house", roof: "roof", windows: "windows" };
-const JOB_PLURAL: Record<string, string> = { driveway: "driveways", "house-wash": "houses", roof: "roofs", windows: "windows" };
+const JOB_NOUN: Record<string, string> = { driveway: "driveway", "house-wash": "house", roof: "roof", windows: "windows", deck: "deck" };
+const JOB_PLURAL: Record<string, string> = { driveway: "driveways", "house-wash": "houses", roof: "roofs", windows: "windows", deck: "decks" };
 
 // Google Business Profile "update" post: no hashtags (they do nothing there), the result first, one link.
 export function gbpPost(job: Job, p: Profile) {

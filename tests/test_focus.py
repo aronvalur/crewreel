@@ -85,7 +85,7 @@ def band(lo, hi, n=24):
     return list(p / p.sum())
 
 
-@pytest.mark.parametrize("tpl", ["driveway", "house-wash", "roof", "windows"])
+@pytest.mark.parametrize("tpl", ["driveway", "house-wash", "roof", "windows", "deck"])
 def test_hook_moves_off_a_busy_top(tpl):
     r = layout(tpl, {"busy": {"before": band(3, 9), "after": band(3, 9)}})
     assert r["zone"] == 1 and r["hookTop"] > 1920 * .5

@@ -1,0 +1,178 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../_lib/base.css">
+<script src="../_lib/motion.js"></script>
+<script src="../_lib/endcard.js"></script>
+<script src="../_lib/captions.js"></script>
+<script src="../_lib/byline.js"></script>
+<style>
+  /* wet edge: a soft sheen leading each board's wipe */
+  .edge{position:absolute;width:120px;margin-left:-100px;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.32));
+    mix-blend-mode:screen;display:none}
+  #big{position:absolute;left:80px;right:80px;top:var(--st);font-weight:700;font-size:92px;line-height:1.02;letter-spacing:-3px;
+    text-shadow:0 2px 40px rgba(0,0,0,.45),0 2px 6px rgba(0,0,0,.35)}
+  .chip{position:absolute;top:var(--st);font-weight:650;font-size:30px;letter-spacing:5px;text-transform:uppercase;
+    padding:14px 22px 13px;border-radius:12px;background:rgba(12,14,16,.5);backdrop-filter:blur(12px)}
+  #tagA{left:64px} #tagB{right:64px}
+  #label{top:auto;bottom:var(--sb);left:80px}
+  #step{position:absolute;right:80px;top:var(--st);font-weight:650;font-size:30px;letter-spacing:4px;color:rgba(255,255,255,.85)}
+</style>
+</head>
+<body>
+<div id="scrim" class="layer scrim"></div>
+<div id="hook" class="hook"></div>
+<div id="step"></div>
+<div id="plate" class="plate"><div class="k" id="plateK"></div><div class="v" id="plateV"></div></div>
+<div id="edges"></div>
+<div id="tagA" class="chip">After</div><div id="tagB" class="chip">Before</div>
+<div id="big"></div>
+<div id="label" class="chip"></div>
+<script>
+// Template 5 — "Deck Cleaning" (9:16, 16.4 s)
+// 0–2.6 hook over the grey deck (slow push) · 2.6–7.4 wash + brighten clips, step labels, method plate
+// 7.4–11.8 board-by-board reveal: each board band wipes clean in a cascade, the way a deck is washed
+// 11.8–13.4 up-close wipe where the change is biggest · 13.4–16.4 end card
+const P = Object.assign({
+  accent: "#F2B880", business: "Valur Exterior Cleaning", initials: "V", area: "Reykjavík & Kópavogur",
+  url: "crewreel.app/q/valur", hook: "Grey deck?\nIt's *not* old.",
+  methodLabel: "The method", method: "Low-pressure wash, board by board, then a wood brightener.",
+  steps: ["Wash", "Brighten"],
+  result: "Back to\nthe real colour.",
+  closeLabel: "Up close",
+  vo: [
+    { at: 0.2, text: "Grey, slippery deck? It's not old, it's dirty." },
+    { at: 4.0, text: "We wash it board by board, then brighten the wood." },   // line 1 runs 3.6 s
+    { at: 9.5, text: "Back to the colour it was built with." },
+    { at: 13.7, text: "Get a free quote at the link." }
+  ]
+}, window.PARAMS || {});
+const T = { hook: 2.6, a1: 5.0, action: 7.4, reveal: 11.8, close: 13.4, total: 16.4 };
+const N = 8, W0 = T.action + .4, STAG = .13, BD = .6;  // board bands, cascade stagger, one board's wipe
+const W1 = W0 + (N - 1) * STAG + BD;
+const boardX = (t, i) => -.08 + 1.16 * inOutCubic(prog(t, W0 + i * STAG, W0 + i * STAG + BD));
+window.META = { fps: 30, duration: T.total, sources: ["before", "after", "action1", "action2"],
+  cuts: [T.hook, T.a1, T.action, T.reveal, T.close], impacts: [W1 - .05], vo: P.vo,
+  sfx: [{ at: W0 - .1, dur: W1 - W0 + .3, kind: "rinse" }].concat(P.aligned && (P.focus || []).length ? [{ at: T.reveal + .2, dur: .9, kind: "rinse" }] : []) };
+document.documentElement.style.setProperty("--accent", P.accent);
+const S = M.safe(P);                     // text safe zones: reel (IG/TikTok UI) or 4:5 feed crop
+const { $, prog, outExpo, inOutCubic, inOutSine, clamp, show } = M;
+const hookWords = M.words($("hook"), P.hook);
+const bigWords = M.words($("big"), P.result);
+$("plateK").textContent = P.methodLabel; $("plateV").textContent = P.method;
+$("label").textContent = P.closeLabel;
+for (let i = 0; i < N; i++) {
+  const e = document.createElement("div"); e.className = "edge";
+  e.style.top = (i / N * 1920) + "px"; e.style.height = (1920 / N) + "px"; $("edges").appendChild(e);
+}
+EndCard.mount(P);
+Byline.mount(P);
+Captions.mount();
+
+window.relayout = () => {                // re-run after web fonts load (overlay.js calls it)
+  // method plate: low by default (step label sits top right); high only if the action is low on the glass
+  const el = $("plate"), d = el.style.display;
+  el.style.display = "block"; el.style.top = ""; el.style.bottom = "";
+  const ph = el.offsetHeight;
+  const z = M.quietZone(M.activity(P, ["action1", "action2"]), [[S.t + 70, S.t + 70 + ph], [1920 - S.b - ph, 1920 - S.b]]);
+  if (z === 0) { el.style.bottom = "auto"; el.style.top = (S.t + 70) + "px"; }
+  el.style.display = d;
+  window.PLATE_ZONE = z;
+  // hook and result line over the calmest band (open glass or sky, not mullions and frames)
+  for (const [id, srcs] of [["hook", P.aligned ? ["before", "after"] : ["before"]], ["big", ["after"]]]) {
+    const e = $(id), dd = e.style.display;
+    e.style.display = "block"; e.style.top = "";
+    const h = e.offsetHeight, zz = M.calmZone(P, srcs, [[S.t, S.t + h], [1920 - S.b - 40 - h, 1920 - S.b - 40]]);
+    if (zz === 1) e.style.top = (1920 - S.b - 40 - h) + "px";
+    e.style.display = dd;
+    window[id.toUpperCase() + "_ZONE"] = zz;
+  }
+  $("scrim").classList.toggle("low", window.HOOK_ZONE === 1 || window.BIG_ZONE === 1);
+};
+window.relayout();
+
+window.seek = function (t) {
+  const L = [];
+  let wipeX = null;
+  if (t < T.hook) {
+    L.push({ src: "before", t, zoom: 1.04 + .08 * inOutSine(t / T.hook), fy: .5 });     // slow push into the spots
+  } else if (t < T.action) {
+    const i = t < T.a1 ? 0 : 1, s = i ? T.a1 : T.hook;
+    L.push({ src: "action" + (i + 1), t: t - s + .1, zoom: 1.03 + .04 * prog(t, s, s + 2.4) });
+  } else if (t < T.reveal) {
+    const ct = 1.5 + (t - T.action) * .4;
+    const k = prog(t, W0, W1);
+    const push = 1.02 + .05 * inOutSine(prog(t, W1, T.reveal));
+    L.push({ src: "before", t: ct, zoom: push });
+    if (P.aligned) {
+      wipeX = k;
+      if (t < W1) {
+        // one 'after' band per board, each wiping left to right a beat after the one above
+        for (let i = 0; i < N; i++) {
+          const x = boardX(t, i);
+          if (x > -.08) L.push({ src: "after", t: ct, zoom: push, mask: [-1, x], vmask: [i / N - .003, (i + 1) / N + .003], feather: 40 });
+        }
+      } else L.push({ src: "after", t: ct, zoom: push });
+    } else {
+      L.push({ src: "after", t: ct, zoom: push, alpha: k });          // no reliable alignment: soft crossfade
+    }
+  } else if (t < T.close) {
+    const f = M.focusAt(P, 0, { fx: .5, fy: .5 });
+    const base = { zoom: 1.6 + .15 * inOutSine(prog(t, T.reveal, T.close)), fx: f.fx, fy: f.fy };
+    if (P.aligned && (P.focus || []).length) {
+      const k = inOutCubic(prog(t, T.reveal + .2, T.reveal + .95));
+      L.push({ src: "before", t: 2.5 + (t - T.reveal) * .5, ...base });
+      L.push({ src: "after", t: 2.5 + (t - T.reveal) * .5, ...base, mask: [-1, -.2 + 1.4 * k], feather: 120 });
+    } else {
+      L.push({ src: "after", t: 2.5 + (t - T.reveal) * .5, ...base });
+    }
+  } else {
+    L.push(...EndCard.layers(t, T.close));
+  }
+  window.__plan = { layers: L };
+
+  M.riseWords(hookWords, t, -.12, { out: T.hook, outDur: .3 });
+  Byline.seek(t, .5, T.hook);
+  $("hook").style.display = t < T.hook ? "block" : "none";
+
+  const inAct = t >= T.hook && t < T.action;
+  $("plate").style.display = inAct ? "block" : "none";
+  const plateOut = Math.min(T.action, T.hook + .3 + M.readTime(P.methodLabel + " " + P.method) + .4);
+  show($("plate"), outExpo((t - T.hook - .3) / .55) * (1 - inOutSine(prog(t, plateOut - .4, plateOut))), 28);
+  $("step").style.display = inAct ? "block" : "none";
+  if (inAct) {
+    const i = t < T.a1 ? 0 : 1, s = i ? T.a1 : T.hook, e = i ? T.action : T.a1;
+    $("step").textContent = `0${i + 1} — ${P.steps[i]}`.toUpperCase();
+    show($("step"), outExpo((t - s - .1) / .4) * (1 - prog(t, e - .2, e)), 16);
+  }
+
+  // a soft wet sheen leads each board's wipe
+  const ed = $("edges");
+  for (let i = 0; i < N; i++) {
+    const e = ed.children[i], x = boardX(t, i), on = wipeX !== null && P.aligned && x > -.05 && x < 1.05 && t < W1;
+    e.style.display = on ? "block" : "none";
+    if (on) { e.style.left = x * 1080 + "px"; e.style.opacity = Math.sin(Math.PI * prog(t, W0 + i * STAG, W0 + i * STAG + BD)); }
+  }
+
+  // tags: AFTER (left) appears once the wipe has passed it, BEFORE (right) until the wipe reaches it
+  const inRev = t >= T.action && t < T.reveal;
+  const tagK = inRev ? outExpo((t - T.action - .15) / .45) : 0;
+  const x = wipeX === null ? (P.aligned ? 2 : -1) : boardX(t, Math.floor(S.t / 1920 * N)) * 1080;   // the board the tags sit on
+  const fade = P.aligned ? 1 : inOutSine(prog(t, W0, W1));
+  const aw = $("tagA").offsetWidth, bw = $("tagB").offsetWidth;
+  $("tagA").style.opacity = tagK * (P.aligned ? clamp((x - 64 - aw - 20) / 60) : fade) * (1 - prog(t, W1, W1 + .3));
+  $("tagB").style.opacity = tagK * (P.aligned ? clamp((1080 - 64 - bw - 20 - x) / 60) : 1 - fade) * (1 - prog(t, W1, W1 + .3));
+  $("tagA").style.display = $("tagB").style.display = inRev ? "block" : "none";
+
+  M.riseWords(bigWords, t, W1 + .25, { out: T.reveal, outDur: .3 });
+  $("big").style.display = inRev ? "block" : "none";
+
+  const inClose = t >= T.reveal && t < T.close;
+  $("label").style.display = inClose ? "block" : "none";
+  if (inClose) show($("label"), outExpo((t - T.reveal - .15) / .45) * (1 - prog(t, T.close - .2, T.close)), 16);
+
+  $("scrim").style.opacity = t < T.close ? 1 : 0;
+  Captions.seek(t, P.voTiming, P.vo);
+  EndCard.seek(t, T.close);
+};
+window.seek(0);
+</script></body></html>

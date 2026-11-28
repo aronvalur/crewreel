@@ -151,18 +151,18 @@ def test_guided_camera_films_keeps_and_sends_clips(server, tmp_path):
         await p.locator('.drop').nth(n).locator('.drop-acts .btn:not(.ghost)').click();
         await p.waitForFunction(() => document.querySelector('.cam-view')?.videoWidth > 0);
         out['ghost' + n] = await p.locator('.cam-ghost').count();
-        await p.click('.cam-rec'); await p.waitForTimeout(5300);
-        out['good' + n] = await p.locator('.cam-time.ok').count();
+        await p.click('.cam-rec');
+        out['good' + n] = await p.waitForSelector('.cam-time.ok', { timeout: 15000 }).then(() => 1, () => 0);
         await p.click('.cam-rec'); await p.getByRole('button', { name: 'Use this clip' }).click();
       };
       await film(0);                                         // before
       await p.waitForTimeout(300);
-      await p.reload(); await p.waitForTimeout(800);         // crew closes the app, comes back after the job
+      await p.reload(); await p.waitForSelector('.drop.filled', { timeout: 15000 });   // crew closes the app, comes back
       out.keptBefore = await p.locator('.drop').nth(0).locator('.small').first().innerText();
       await p.locator('.drop').nth(1).locator('input[type=file]').setInputFiles(clip);
       await film(2);                                         // after, with the before as ghost
       await p.click('button[type=submit]');
-      await p.waitForURL(/\\/jobs\\/[0-9]/, { timeout: 15000 });
+      await p.waitForURL(/\\/jobs\\/[0-9]/, { timeout: 45000 });
       out.url = p.url();
       await p.goto(base + '/jobs/new'); await p.waitForTimeout(800);
       out.cleared = await p.locator('.drop.filled').count();

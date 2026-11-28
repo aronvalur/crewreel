@@ -13,7 +13,7 @@ export type Slot = {
 export type Field = { name: string; label: string; placeholder: string; max: number; hint?: string };
 
 export type Template = {
-  id: "driveway" | "house-wash" | "roof" | "windows";
+  id: "driveway" | "house-wash" | "roof" | "windows" | "deck";
   title: string;
   length: string;
   blurb: string;
@@ -100,6 +100,26 @@ export const TEMPLATES: Template[] = [
         hint: "Wrap one word in *stars* to colour it." },
       { name: "method", label: "How you cleaned it", placeholder: "Pure water, scrub, squeegee. Frames and sills detailed.", max: 70 },
       { name: "result", label: "Result line", placeholder: "Crystal clear.\nInside and out.", max: 32 },
+    ],
+  },
+  {
+    id: "deck",
+    title: "Deck cleaning",
+    length: "16 s",
+    blurb: "The grey deck, wash and brighten, then a board-by-board reveal and a close-up.",
+    slots: [
+      { name: "before", min: 3, label: "Before", kind: "photo-or-video",
+        hint: "From the steps or a corner, phone upright, boards running across the frame. Hold still for 5 seconds." },
+      { name: "action1", min: 2.5, label: "Washing", kind: "video", hint: "The wand or surface cleaner going along a board, 3–5 seconds." },
+      { name: "action2", min: 2.5, label: "Brightening", kind: "video", hint: "Brightener going on, or the rinse showing the wood colour, 3–5 seconds." },
+      { name: "after", min: 3.5, label: "After", kind: "photo-or-video",
+        hint: "Same spot as the before shot, once the wood has dried a bit. Hold still for 5 seconds." },
+    ],
+    fields: [
+      { name: "hook", label: "Opening line", placeholder: "Grey deck?\nIt's *not* old.", max: 40,
+        hint: "Wrap one word in *stars* to colour it." },
+      { name: "method", label: "How you cleaned it", placeholder: "Low-pressure wash, board by board, then a wood brightener.", max: 70 },
+      { name: "result", label: "Result line", placeholder: "Back to\nthe real colour.", max: 32 },
     ],
   },
 ];

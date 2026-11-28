@@ -14,8 +14,8 @@ from datetime import datetime, timezone
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.abspath(os.environ.get("CREWREEL_DATA", os.path.join(ROOT, "data")))
-TEMPLATES = {"driveway", "house-wash", "roof", "windows"}
-POSTER_AT = {"driveway": 9.9, "house-wash": 10.6, "roof": 9.5, "windows": 8.5}   # split at 50 % / sweep mid-wall / rinse mid-roof / blade mid-glass
+TEMPLATES = {"driveway", "house-wash", "roof", "windows", "deck"}
+POSTER_AT = {"driveway": 9.9, "house-wash": 10.6, "roof": 9.5, "windows": 8.5, "deck": 8.6}   # split at 50 % / sweep mid-wall / rinse mid-roof / blade mid-glass
 
 # render.py prints these as it moves through the pipeline -> what the contractor sees
 STAGES = [("align:", "Drawing graphics"), ("overlay:", "Steadying shots"),

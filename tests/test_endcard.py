@@ -50,7 +50,7 @@ def test_end_card_layout_fits_safe_zones_and_long_names():
     })();"""
     params = {"business": "Northern Lights Pressure Washing & Soft Wash Co", "area": "Greater Reykjavík",
               "url": "example.com/quote", "aligned": True}
-    for tpl in ("driveway", "house-wash", "roof", "windows"):
+    for tpl in ("driveway", "house-wash", "roof", "windows", "deck"):
         arg = json.dumps([f"{ROOT}/templates/{tpl}/index.html", params])
         r = json.loads(subprocess.run(["node", "-e", js, arg], capture_output=True, text=True, check=True,
                                       cwd=ROOT).stdout)
@@ -88,7 +88,7 @@ def test_feed_frame_keeps_every_text_inside_the_4x5_crop():
       });
       console.log(JSON.stringify(r)); await b.close();
     })();"""
-    for tpl in ("driveway", "house-wash", "roof", "windows"):
+    for tpl in ("driveway", "house-wash", "roof", "windows", "deck"):
         arg = json.dumps([f"{ROOT}/templates/{tpl}/index.html"])
         out = json.loads(subprocess.run(["node", "-e", js, arg], capture_output=True, text=True, check=True, cwd=ROOT).stdout)
         assert out == [], f"{tpl}: text outside the feed crop: {out[:5]}"

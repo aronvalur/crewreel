@@ -1,7 +1,7 @@
 """Generate placeholder job footage for testing templates (NOT for customer reels).
 
 Creates procedural 'before', 'after' and 'action' clips for two surfaces:
-  pavers (driveway), siding (house wash), roof (roof soft wash), glass (window cleaning)
+  pavers (driveway), siding (house wash), roof (roof soft wash), glass (window cleaning), deck (deck cleaning)
 The 'after' clip is deliberately shot from a slightly different camera position
 (shift + rotation) so the auto-align step has something real to fix.
 
@@ -48,6 +48,18 @@ def base_surface(kind, h=H * 2, w=W * 2):
         g0 = int(h * .68)
         img[g0:g0 + 26] = 228                                               # white gutter
         img[g0 + 26:] = np.dstack([grain * 40 + 60, grain * 60 + 110, grain * 30 + 50])[g0 + 26:]  # lawn
+    elif kind == "deck":   # timber boards running across the frame, warm wood with grain and gaps
+        bw = 92
+        b = np.arange(h) // bw
+        tone = np.random.default_rng(31).random(b.max() + 2)[b][:, None] * 18
+        grain2 = noise(h, w, 3, 32)[:, :] * .6 + np.sin(np.arange(w)[None, :] / 9 + noise(h, w, 80, 33) * 12) * .25
+        img = np.dstack([168 + tone + grain2 * 30, 112 + tone * .7 + grain2 * 22, 68 + tone * .4 + grain2 * 14])
+        gap = (np.arange(h) % bw) < 7
+        img[gap] *= .25
+        for k in range(b.max() + 1):                                      # screws near the ends of boards
+            y = k * bw + bw // 2
+            for x in (int(w * .2), int(w * .8)):
+                cv2.circle(img, (x, y - 16), 5, (60, 55, 50), -1); cv2.circle(img, (x, y + 16), 5, (60, 55, 50), -1)
     elif kind == "glass":  # a big window: white frame + mullions, garden view behind the glass
         y = np.linspace(0, 1, h)[:, None]
         sky = np.dstack([150 + 40 * y + 0 * grain, 185 + 30 * y + 0 * grain, 230 - 10 * y + 0 * grain])
@@ -82,6 +94,8 @@ def dirt_mask(kind, h=H * 2, w=W * 2):
     m = np.clip((m - .25) * 1.8, 0, 1)
     if kind == "siding":   # algae heavier near the bottom and under boards
         m *= np.linspace(.5, 1.0, h)[:, None]
+    if kind == "deck":     # weathered grey everywhere, green algae in the gaps' shade
+        m = np.clip(.75 + noise(h, w, 20, 34) * .3, 0, 1)
     if kind == "glass":    # hard-water spots + film on the panes only
         r = np.random.default_rng(15)
         spots = np.zeros((h, w), np.float32)
@@ -100,11 +114,11 @@ def dirt_mask(kind, h=H * 2, w=W * 2):
 
 
 def dirty(img, kind, m):
-    tint = {"pavers": [70, 75, 60], "roof": [28, 28, 26], "glass": [196, 192, 178]}.get(kind, [95, 120, 70])
+    tint = {"pavers": [70, 75, 60], "roof": [28, 28, 26], "glass": [196, 192, 178], "deck": [128, 128, 122]}.get(kind, [95, 120, 70])
     tint = np.array(tint, np.float32)
-    k = (m * {"pavers": .75, "roof": .8, "glass": .55}.get(kind, .6))[..., None]
+    k = (m * {"pavers": .75, "roof": .8, "glass": .55, "deck": .8}.get(kind, .6))[..., None]
     out = img * (1 - k) + tint * k
-    if kind not in ("roof", "glass"):
+    if kind not in ("roof", "glass", "deck"):
         out[: img.shape[0] // (6 if kind == "pavers" else 10)] = img[: img.shape[0] // (6 if kind == "pavers" else 10)]
     return out
 
@@ -144,12 +158,16 @@ def main(kind, out):
     # action: a cleaned band sweeping across (surface cleaner / soft wash wand)
     hh, ww = clean.shape[:2]
     yy, xx = np.mgrid[0:hh, 0:ww].astype(np.float32)
-    clips = {"pavers": 1, "roof": 2, "glass": 2}.get(kind, 3)
+    clips = {"pavers": 1, "roof": 2, "glass": 2, "deck": 2}.get(kind, 3)
     for c in range(clips):
         frames = []
         for i in range(n if clips == 1 else FPS * 2):
             t = i / FPS
-            if kind == "glass":    # squeegee strokes left to right, one pane row per clip
+            if kind == "deck":     # wand works along one board band per clip, left to right
+                front = ww * (.1 + .85 * (t / 2))
+                band = np.abs(yy - hh * (.42 + .16 * c)) < hh * .05
+                k = np.clip((front - xx) / 30, 0, 1) * band
+            elif kind == "glass":    # squeegee strokes left to right, one pane row per clip
                 front = ww * (.1 + .85 * (t / 2))
                 band = np.abs(yy - hh * (.35 + .3 * c)) < hh * .13
                 k = np.clip((front - xx) / 12, 0, 1) * band

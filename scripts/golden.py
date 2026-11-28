@@ -12,7 +12,7 @@ from PIL import Image
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GOLDEN = os.path.join(ROOT, "tests", "golden")
 # moments that carry the design: hook, method plate, reveal text, end card
-TIMES = {"driveway": [1.6, 4.5, 8.8, 11.2, 14.5], "house-wash": [1.6, 4.0, 12.5, 19.5], "roof": [1.8, 5.0, 12.0, 17.5], "windows": [1.6, 5.5, 8.5, 10.5, 16.0]}
+TIMES = {"driveway": [1.6, 4.5, 8.8, 11.2, 14.5], "house-wash": [1.6, 4.0, 12.5, 19.5], "roof": [1.8, 5.0, 12.0, 17.5], "windows": [1.6, 5.5, 8.5, 10.5, 16.0], "deck": [1.6, 5.5, 8.6, 10.5, 16.0]}
 PARAMS = {"business": "Golden Exterior Care", "initials": "G", "area": "Testville", "url": "example.com/quote",
           "accent": "#7FD1FF", "aligned": True}
 SIZE = (270, 480)
