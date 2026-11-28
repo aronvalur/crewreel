@@ -57,7 +57,9 @@ main.wrap { padding-top: 32px; padding-bottom: 80px; }
 .section > .muted { margin-bottom: 16px; }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
-@media (max-width: 520px) { .grid { grid-template-columns: 1fr 1fr; gap: 12px; } .top .wrap { gap: 14px; } }
+@media (max-width: 520px) { .grid { grid-template-columns: 1fr 1fr; gap: 12px; } .top .wrap { gap: 12px; } .nav { font-size: 14px; } }
+@media (max-width: 380px) { .brand { font-size: 17px; } .top .wrap { gap: 10px; } }
+.top .btn { white-space: nowrap; }
 .reel { text-decoration: none; display: block; }
 .thumb { aspect-ratio: 9 / 16; border-radius: 12px; background: var(--line); overflow: hidden; border: 1px solid var(--line); }
 .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -139,3 +141,41 @@ input[type=color] { width: 52px; height: 40px; padding: 2px; border: 1px solid v
 .lead.new { border-color: var(--ink); }
 input[type=email], input[type=tel] { width: 100%; font: inherit; color: inherit; background: var(--surface);
   border: 1px solid var(--line-strong); border-radius: 10px; padding: 10px 12px; }
+
+.drop { grid-template-columns: 72px 1fr; }
+.drop-acts { grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; }
+@media (min-width: 560px) { .drop { grid-template-columns: 72px 1fr auto; } .drop-acts { grid-column: auto; } }
+
+/* Guided camera (full screen, always dark: it's a viewfinder) */
+.cam { position: fixed; inset: 0; z-index: 50; background: #000; color: #fff; overflow: hidden; }
+.cam-view, .cam-ghost { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cam-ghost { opacity: .38; pointer-events: none; }
+.cam-grid { position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, transparent calc(33.33% - .5px), rgba(255,255,255,.28) 0, rgba(255,255,255,.28) calc(33.33% + .5px), transparent 0,
+    transparent calc(66.66% - .5px), rgba(255,255,255,.28) 0, rgba(255,255,255,.28) calc(66.66% + .5px), transparent 0),
+    linear-gradient(transparent calc(33.33% - .5px), rgba(255,255,255,.28) 0, rgba(255,255,255,.28) calc(33.33% + .5px), transparent 0,
+    transparent calc(66.66% - .5px), rgba(255,255,255,.28) 0, rgba(255,255,255,.28) calc(66.66% + .5px), transparent 0); }
+.cam-level { position: absolute; left: 30%; right: 30%; top: 50%; height: 2px; background: rgba(255,255,255,.7); pointer-events: none; }
+.cam-level.ok { background: #6be38f; box-shadow: 0 0 10px #6be38f; }
+.cam-top { position: absolute; left: 0; right: 0; top: 0; display: flex; gap: 12px; align-items: flex-start; justify-content: space-between;
+  padding: max(16px, env(safe-area-inset-top)) 16px 28px; background: linear-gradient(rgba(0,0,0,.6), transparent); }
+.cam-top b { font-family: "Display", sans-serif; font-size: 20px; }
+.cam-top p { font-size: 14px; opacity: .85; margin-top: 2px; max-width: 34ch; }
+.cam-x { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(255,255,255,.16); color: #fff; font-size: 16px; cursor: pointer; }
+.cam-tip { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); padding: 8px 14px; border-radius: 999px;
+  background: rgba(0,0,0,.55); font-weight: 600; font-size: 15px; white-space: nowrap; }
+.cam-tip.bad { white-space: normal; width: min(86%, 380px); text-align: center; border-radius: 14px; top: 40%; }
+.cam-bottom { position: absolute; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px;
+  padding: 28px 16px max(24px, env(safe-area-inset-bottom)); background: linear-gradient(transparent, rgba(0,0,0,.6)); }
+.cam-alt { justify-self: start; }
+.cam .btn.ghost { color: #fff; border-color: rgba(255,255,255,.5); }
+.cam-use { grid-column: 2 / 4; justify-self: end; background: #fff; color: #000; border-color: #fff; }
+.cam-rec { position: relative; width: 88px; height: 88px; border: 0; padding: 0; background: none; cursor: pointer; }
+.cam-rec svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.cam-rec .trk { fill: none; stroke: rgba(255,255,255,.9); stroke-width: 5; }
+.cam-rec .arc { fill: none; stroke: #ff5a4f; stroke-width: 5; stroke-dasharray: 251.3; stroke-linecap: round; }
+.cam-rec .arc.ok { stroke: #6be38f; }
+.cam-rec i { position: absolute; inset: 14px; border-radius: 50%; background: #ff3b30; transition: inset .15s, border-radius .15s; }
+.cam-rec.on i { inset: 28px; border-radius: 8px; }
+.cam-time { justify-self: end; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 15px; opacity: .9; }
+.cam-time.ok { color: #6be38f; }

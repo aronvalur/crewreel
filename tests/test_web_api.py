@@ -132,3 +132,50 @@ def test_quote_request_needs_a_way_to_reply_and_drops_bots(server):
     assert call(base, "POST", "/api/leads", {"name": "Bot", "contact": "a@b.is", "website": "http://spam"})[0] == 201
     assert len(leads(data)) == n                                       # honeypot: looks accepted, nothing stored
     assert get(base, "/q") == 200 and get(base, "/quotes") == 200
+
+
+def test_guided_camera_films_keeps_and_sends_clips(server, tmp_path):
+    """Film the before in the browser camera, leave, come back: it's still there, the after shows it as a
+    ghost, and the filmed clips upload like picked ones (fake camera device)."""
+    base, data = server
+    clip = tmp_path / "a.mp4"; clip.write_bytes(b"\x00" * 2048)
+    js = """
+    const { chromium } = require('playwright');
+    (async () => {
+      const [base, clip] = JSON.parse(process.argv.at(-1));
+      const b = await chromium.launch({ args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
+      const c = await b.newContext({ viewport: { width: 390, height: 844 } });
+      const p = await c.newPage(); const out = {};
+      await p.goto(base + '/jobs/new');
+      const film = async (n) => {
+        await p.locator('.drop').nth(n).locator('.drop-acts .btn:not(.ghost)').click();
+        await p.waitForFunction(() => document.querySelector('.cam-view')?.videoWidth > 0);
+        out['ghost' + n] = await p.locator('.cam-ghost').count();
+        await p.click('.cam-rec'); await p.waitForTimeout(5300);
+        out['good' + n] = await p.locator('.cam-time.ok').count();
+        await p.click('.cam-rec'); await p.getByRole('button', { name: 'Use this clip' }).click();
+      };
+      await film(0);                                         // before
+      await p.waitForTimeout(300);
+      await p.reload(); await p.waitForTimeout(800);         // crew closes the app, comes back after the job
+      out.keptBefore = await p.locator('.drop').nth(0).locator('.small').first().innerText();
+      await p.locator('.drop').nth(1).locator('input[type=file]').setInputFiles(clip);
+      await film(2);                                         // after, with the before as ghost
+      await p.click('button[type=submit]');
+      await p.waitForURL(/\\/jobs\\/[0-9]/, { timeout: 15000 });
+      out.url = p.url();
+      await p.goto(base + '/jobs/new'); await p.waitForTimeout(800);
+      out.cleared = await p.locator('.drop.filled').count();
+      console.log(JSON.stringify(out)); await b.close();
+    })();"""
+    r = subprocess.run(["node", "-e", js, json.dumps([base, str(clip)])], capture_output=True, text=True, cwd=ROOT, timeout=90)
+    assert r.returncode == 0, r.stderr[-1500:]
+    out = json.loads(r.stdout)
+    assert out["ghost0"] == 0 and out["ghost2"] == 1, out          # ghost only on the after shot
+    assert out["good0"] == 1 and out["good2"] == 1, out            # timer says long enough at ~5 s
+    assert "before-" in out["keptBefore"], out                     # survived the reload
+    jid = out["url"].rstrip("/").split("/")[-1]
+    job = json.loads((data / "jobs" / jid / "job.json").read_text())
+    assert job["status"] == "queued" and job["files"]["before"].startswith("before.") and job["files"]["after"].startswith("after.")
+    assert (data / "jobs" / jid / "in" / job["files"]["before"]).stat().st_size > 20_000   # real video bytes
+    assert out["cleared"] == 0, out                                 # sent clips are forgotten on the phone
