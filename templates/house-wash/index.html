@@ -102,7 +102,7 @@ window.seek = function (t) {
       L.push({ src: "after", t: 1 + (t - s), ...base });
     }
   } else {
-    L.push({ src: "after", t: 3, zoom: 1.1, blur: 36, dim: .5 });
+    L.push(...EndCard.layers(t, T.details));
   }
   L.forEach(l => { if (l.mask === undefined) delete l.mask; });
   window.__plan = { layers: L };

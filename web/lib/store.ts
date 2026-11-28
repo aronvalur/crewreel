@@ -36,7 +36,7 @@ export type Profile = {
 };
 
 export const DEFAULT_PROFILE: Profile = {
-  business: "", area: "", url: "", accent: "#7FD1FF", cta: "Free quote in 60 seconds",
+  business: "", area: "", url: "", accent: "#7FD1FF", cta: "Get a free quote",
 };
 
 const jobsDir = () => path.join(DATA, "jobs");

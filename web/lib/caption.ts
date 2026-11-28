@@ -13,7 +13,7 @@ export function caption(job: Job, p: Profile) {
   // blank fields fall back to the same suggestions the reel itself used
   const field = (name: string) =>
     flat(job.params[name] || templateById(job.template)?.fields.find(f => f.name === name)?.placeholder || "");
-  const cta = (p.cta || "Free quote in 60 seconds") + (p.url ? `: ${p.url}` : ".");
+  const cta = (p.cta || "Get a free quote") + (p.url ? `: ${p.url}` : ".");
   const place = p.area ? p.area.split(/\s*(?:&|,|\band\b)\s*/)[0].trim() : "";
   return [
     field("hook"),

@@ -75,7 +75,7 @@ def build_params(job):
         "area": prof.get("area", ""),
         "url": prof.get("url") or "your-site.com/quote",
         "accent": prof.get("accent") or "#7FD1FF",
-        "cta": prof.get("cta") or "Free quote in 60 seconds",
+        "cta": prof.get("cta") or "Get a free quote",
     }
     for k in ("hook", "method", "result"):
         if job.get("params", {}).get(k):

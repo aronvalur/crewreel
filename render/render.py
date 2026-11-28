@@ -151,9 +151,33 @@ XS = np.arange(W, dtype=np.float32)
 YS = np.arange(H, dtype=np.float32)
 
 
+def into_box(img, box, zoom=1.0, fx=.5, fy=.5):
+    """Cover-crop a full frame to the box's aspect around (fx, fy), scale it into box = [x, y, w, h] px."""
+    x, y, bw, bh = (int(round(v)) for v in box)
+    s = min(W / bw, H / bh) / max(zoom, 1.0)          # source px per box px
+    cw, ch = bw * s, bh * s
+    x0 = float(np.clip(fx * W - cw / 2, 0, W - cw))
+    y0 = float(np.clip(fy * H - ch / 2, 0, H - ch))
+    M = np.float32([[1 / s, 0, x - x0 / s], [0, 1 / s, y - y0 / s]])
+    return cv2.warpAffine(img, M, (W, H), flags=cv2.INTER_AREA if s > 1 else cv2.INTER_LINEAR)
+
+
+def box_alpha(box, radius=0.0, feather=1.5):
+    """Rounded-rectangle coverage (H, W, 1): 1 inside, soft edge of `feather` px."""
+    x, y, bw, bh = box
+    r = min(float(radius), bw / 2, bh / 2)
+    dx = np.maximum(np.abs(XS + .5 - (x + bw / 2)) - (bw / 2 - r), 0)[None, :]
+    dy = np.maximum(np.abs(YS + .5 - (y + bh / 2)) - (bh / 2 - r), 0)[:, None]
+    d = np.sqrt(dx * dx + dy * dy) - r               # signed distance outside the rounded box
+    return np.clip(.5 - d / max(feather, .5), 0, 1)[..., None].astype(np.float32)
+
+
 def render_layer(L, clips):
     if "color" in L:
         img = np.broadcast_to(hexrgb(L["color"]), (H, W, 3)).astype(np.float32)
+    elif "box" in L:  # footage in a rounded card (end-card proof shot); zoom/fx/fy frame it inside the box
+        img = clips[L["src"]].frame(L.get("t", 0)).astype(np.float32)
+        img = into_box(img, L["box"], L.get("zoom", 1), L.get("fx", .5), L.get("fy", .5))
     else:
         img = clips[L["src"]].frame(L.get("t", 0)).astype(np.float32)
         img = transform(img, L.get("zoom", 1), L.get("fx", .5), L.get("fy", .5))
@@ -161,6 +185,8 @@ def render_layer(L, clips):
     if L.get("dim"):
         img = img * (1 - L["dim"])
     a = np.full((1, W, 1), float(L.get("alpha", 1)), np.float32)
+    if "box" in L:   # colour layers with a box = card shadows (large feather)
+        a = a * box_alpha(L["box"], L.get("radius", 0), L.get("boxFeather", 1.5))
     if "mask" in L:  # horizontal band [x0, x1] in 0..1; feather = soft edge width in px (default 1.5)
         x0, x1 = L["mask"][0] * W, L["mask"][1] * W
         f = float(L.get("feather", 1.5))

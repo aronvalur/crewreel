@@ -83,7 +83,7 @@ window.seek = function (t) {
       window.__x = null;
     }
   } else {
-    layers.push({ src: "after", t: 3.5, zoom: 1.1, blur: 36, dim: .5 });
+    layers.push(...EndCard.layers(t, T.reveal));
   }
   window.__plan = { layers };
 

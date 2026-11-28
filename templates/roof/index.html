@@ -110,7 +110,7 @@ window.seek = function (t) {
       L.push({ src: "after", t: 2.5 + (t - T.reveal), ...base });
     }
   } else {
-    L.push({ src: "after", t: 3, zoom: 1.1, blur: 36, dim: .5 });
+    L.push(...EndCard.layers(t, T.close));
   }
   window.__plan = { layers: L };
 

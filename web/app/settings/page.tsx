@@ -12,7 +12,7 @@ async function save(form: FormData) {
     area: s("area", 40),
     url: s("url", 60).replace(/^https?:\/\//, ""),
     accent: /^#[0-9a-fA-F]{6}$/.test(accent) ? accent : "#7FD1FF",
-    cta: s("cta", 32) || "Free quote in 60 seconds",
+    cta: s("cta", 32) || "Get a free quote",
   });
   redirect("/");
 }
