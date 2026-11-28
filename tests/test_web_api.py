@@ -239,3 +239,22 @@ def test_clip_upload_route_checks_sign_in_itself(locked):
     base, _ = locked
     code, body = call(base, "PUT", "/api/drafts/20261126-deadbeef/before?name=b.mp4", b"x" * 10, "application/octet-stream")
     assert code == 401
+
+
+def test_push_alerts_subscribe_and_never_block_a_quote(server):
+    base, data = server
+    r = urllib.request.urlopen(base + "/api/push"); key = json.loads(r.read())["publicKey"]
+    assert len(key) > 80 and (data / "vapid.json").exists()                  # keys made on first use, kept
+    assert call(base, "POST", "/api/push", {"endpoint": "http://x"})[0] == 400
+    # a real-looking subscription whose push service is unreachable
+    keys = json.loads(subprocess.run(["node", "-e", """
+      const c = require('crypto'); const e = c.createECDH('prime256v1'); e.generateKeys();
+      console.log(JSON.stringify({ p256dh: e.getPublicKey('base64url'), auth: c.randomBytes(16).toString('base64url') }));"""],
+      capture_output=True, text=True, check=True).stdout)
+    sub = {"endpoint": "https://127.0.0.1:9/push/abc", "keys": keys}
+    assert call(base, "POST", "/api/push", sub)[0] == 201
+    assert len(list((data / "push").glob("*.json"))) == 1
+    code, _ = call(base, "POST", "/api/leads", {"name": "Push Test", "contact": "p@example.com", "services": ["Roof"]})
+    assert code == 201 and any(l["name"] == "Push Test" for l in leads(data))
+    assert call(base, "DELETE", "/api/push", {"endpoint": sub["endpoint"]})[0] == 200
+    assert list((data / "push").glob("*.json")) == []

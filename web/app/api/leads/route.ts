@@ -1,6 +1,7 @@
 // Public: the quote page posts here. Never returns other people's data.
 import { NextResponse } from "next/server";
 import { cleanLead, saveLead } from "@/lib/leads";
+import { notifyAll } from "@/lib/push";
 
 export const runtime = "nodejs";
 
@@ -11,5 +12,8 @@ export async function POST(req: Request) {
   if (spam) return NextResponse.json({ ok: true }, { status: 201 });     // look accepted, store nothing
   if (error || !lead) return NextResponse.json({ error }, { status: 400 });
   await saveLead(lead);
+  // alert the contractor's phone; the request is already saved, so a push failure loses nothing
+  await notifyAll(`New quote request: ${lead.name}`,
+    [lead.services.join(", "), lead.address].filter(Boolean).join(" · ") || lead.contact).catch(() => 0);
   return NextResponse.json({ ok: true }, { status: 201 });
 }

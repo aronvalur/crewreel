@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listLeads, markSeen, quoteLink } from "@/lib/leads";
 import { getProfile, listJobs } from "@/lib/store";
+import Alerts from "./alerts";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ export default async function Quotes() {
           From your quote page{profile.url ? "" : <> (<span className="copy">{quoteLink("")}</span>)</>}. Each reel&apos;s caption links here, so you can see which reels bring in work.
         </p>
       </div>
+      <Alerts />
       {perReel.length > 0 && (
         <div className="card">
           <h2>Reels that brought requests</h2>

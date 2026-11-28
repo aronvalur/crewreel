@@ -44,5 +44,5 @@ export function isPublic(path: string, method: string) {
     (path === "/api/leads" && method === "POST") ||
     /^\/api\/files\/[a-z0-9-]{6,40}\/(poster\.jpg|reel\.mp4)$/.test(path) ||
     path.startsWith("/_next/") || path.startsWith("/fonts/") || path.startsWith("/icons/") ||
-    path === "/manifest.webmanifest" || path === "/favicon.ico";
+    path === "/manifest.webmanifest" || path === "/sw.js" || path === "/favicon.ico";
 }
