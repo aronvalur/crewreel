@@ -30,6 +30,7 @@ def test_worker_renders_a_queued_job(tmp_path):
     (data).mkdir()
     (data / "profile.json").write_text(json.dumps({"business": "Valur Exterior", "area": "Reykjavík", "url": "v.is/q"}))
     d = make_job(data, "20261126-aaaa0001", "driveway", foot, ["before", "after", "action1"])
+    jf = d / "job.json"; jf.write_text(json.dumps({**json.loads(jf.read_text()), "feed": True}))
     run_worker(data)
     job = json.loads((d / "job.json").read_text())
     assert job["status"] == "done", (d / "render.log").read_text()[-800:]
@@ -37,6 +38,9 @@ def test_worker_renders_a_queued_job(tmp_path):
     assert (d / "poster.jpg").stat().st_size > 1_000
     assert json.loads((d / "params.json").read_text())["initials"] == "VE"
     assert job["hints"] == {}                        # placeholder footage is clean, upright, full-res
+    wh = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=width,height", "-of", "csv=p=0",
+                         str(d / "feed.mp4")], capture_output=True, text=True).stdout.split()[0]
+    assert wh == "1080,1350"                         # the 4:5 feed version came along
 
 
 def test_worker_fails_gracefully_on_missing_clip(tmp_path):

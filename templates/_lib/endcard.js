@@ -5,7 +5,7 @@
 window.EndCard = (() => {
   // Card geometry (px, 1080x1920). Keeps clear of the top 300 px and bottom 520 px UI zones.
   const BOX = [96, 316, 888, 560], R = 44;
-  let P, els, card, divider, chipB, chipA;
+  let P, els, card, divider, chipB, chipA, DY = 0;
   const mount = P_ => {
     P = P_;
     const d = document.createElement('div');
@@ -21,6 +21,9 @@ window.EndCard = (() => {
       <div class="cta"><span>${M.esc(P.cta || 'Get a free quote')}</span><span class="arr">→</span></div>
       <div class="url">${M.esc(P.url)}</div>`;
     document.body.appendChild(d);
+    // 4:5 feed: the block (316..1340) re-centres in the crop band (285..1635)
+    DY = P.frame === 'feed' ? Math.round((M.FEED_Y0 + M.FEED_Y1) / 2 - (BOX[1] + 1340) / 2) : 0;
+    if (DY) d.style.transform = `translateY(${DY}px)`;
     card = d.querySelector('.proof'); divider = d.querySelector('.pdiv');
     chipB = d.querySelector('.ec-chip.b'); chipA = d.querySelector('.ec-chip.a');
     els = ['.id', '.cta', '.url'].map(c => d.querySelector(c));
@@ -69,7 +72,7 @@ window.EndCard = (() => {
     const e = Math.max(0, t - start), k = cardK(e);
     const f = M.focusAt(P, 0, { fx: .5, fy: .55 });
     const at = 1.2 + e * .3;          // tiny drift keeps the proof alive; stays early so short clips needn't slow down
-    const [x, y, w, h] = BOX, dy = (1 - k) * 40, s = .96 + .04 * k;
+    const [x, y0, w, h] = BOX, y = y0 + DY, dy = (1 - k) * 40, s = .96 + .04 * k;
     const box = [x + w * (1 - s) / 2, y + dy + h * (1 - s) / 2, w * s, h * s];
     const L = [{ src: 'after', t: at, zoom: 1.12, blur: 40, dim: .62 },
                { color: '#000000', alpha: .45 * k, box: [box[0], box[1] + 24, box[2], box[3]], radius: R, boxFeather: 60 }];

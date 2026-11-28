@@ -6,7 +6,7 @@ import { jobDir } from "@/lib/store";
 
 export const runtime = "nodejs";
 
-const SERVABLE: Record<string, string> = { "reel.mp4": "video/mp4", "poster.jpg": "image/jpeg" };
+const SERVABLE: Record<string, string> = { "reel.mp4": "video/mp4", "feed.mp4": "video/mp4", "poster.jpg": "image/jpeg" };
 
 // Node file stream -> web stream with backpressure. Browsers abort range requests all the time
 // (seeking, switching tabs); cancel() must stop the file stream, or Node throws
@@ -43,7 +43,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ path: st
     "Accept-Ranges": "bytes",
     "Cache-Control": "private, max-age=60",
   };
-  if (download) headers["Content-Disposition"] = `attachment; filename="crewreel-${id}${path.extname(name)}"`;
+  if (download) headers["Content-Disposition"] = `attachment; filename="crewreel-${id}-${name}"`;
 
   const range = req.headers.get("range");
   const m = range && /bytes=(\d*)-(\d*)/.exec(range);

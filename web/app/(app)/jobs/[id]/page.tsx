@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
-import { getJob, getProfile, saveJob } from "@/lib/store";
+import { existsSync } from "fs";
+import path from "path";
+import { getJob, getProfile, saveJob, jobDir } from "@/lib/store";
 import { templateById } from "@/lib/templates";
 import { caption, gbpPost, reviewText } from "@/lib/caption";
 import { statusText } from "@/lib/status";
@@ -66,6 +68,9 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
         </div>
         <div className="row">
           <a className="btn" href={`/api/files/${job.id}/reel.mp4?download`}>Download reel</a>
+          {existsSync(path.join(jobDir(job.id), "feed.mp4")) && (
+            <a className="btn ghost" href={`/api/files/${job.id}/feed.mp4?download`}>4:5 feed version</a>
+          )}
           <a className="btn ghost" href={`/api/files/${job.id}/poster.jpg?download`}>Poster image</a>
         </div>
         {texts.map(t => (

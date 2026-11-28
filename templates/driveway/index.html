@@ -8,7 +8,7 @@
 <style>
   .tag{opacity:0}
   #tagB{left:64px} #tagA{right:64px}
-  #label{position:absolute;left:80px;bottom:600px;font-weight:650;font-size:30px;letter-spacing:5px;text-transform:uppercase;
+  #label{position:absolute;left:80px;bottom:var(--sb);font-weight:650;font-size:30px;letter-spacing:5px;text-transform:uppercase;
     padding:14px 22px 13px;border-radius:12px;background:rgba(12,14,16,.5);backdrop-filter:blur(12px)}
 </style>
 </head>
@@ -39,6 +39,7 @@ const T = { hook: 2.8, action: 6.8, reveal: 10.4, close: 12.0, total: 15.0 };
 window.META = { fps: 30, duration: T.total, sources: ["before", "after", "action1"],
   cuts: [T.hook, T.action, T.reveal, T.close], impacts: [T.action + 0.05], vo: P.vo };
 document.documentElement.style.setProperty("--accent", P.accent);
+const S = M.safe(P);                     // text safe zones: reel (IG/TikTok UI) or 4:5 feed crop
 const { $, prog, outExpo, inOutCubic, inOutSine, clamp, show } = M;
 const hookWords = M.words($("hook"), P.hook);
 $("plateK").textContent = P.methodLabel; $("plateV").textContent = P.method;
@@ -51,15 +52,15 @@ window.relayout = () => {                // re-run after web fonts load (overlay
   const el = $("plate"), d = el.style.display;
   el.style.display = "block"; el.style.top = ""; el.style.bottom = "";
   const ph = el.offsetHeight;
-  const z = M.quietZone(M.activity(P, ["action1"]), [[330, 330 + ph], [1920 - 600 - ph, 1920 - 600]]);
-  if (z === 0) { el.style.bottom = "auto"; el.style.top = "330px"; }
+  const z = M.quietZone(M.activity(P, ["action1"]), [[S.t, S.t + ph], [1920 - S.b - ph, 1920 - S.b]]);
+  if (z === 0) { el.style.bottom = "auto"; el.style.top = S.t + "px"; }
   el.style.display = d;
   window.PLATE_ZONE = z;
   // hook sits over the calmest band of the before shot (not over the garage door or a parked car)
   const e = $("hook"), dd = e.style.display;
   e.style.display = "block"; e.style.top = "";
-  const h = e.offsetHeight, zz = M.calmZone(P, P.aligned ? ["before", "after"] : ["before"], [[330, 330 + h], [1920 - 640 - h, 1920 - 640]]);
-  if (zz === 1) e.style.top = (1920 - 640 - h) + "px";
+  const h = e.offsetHeight, zz = M.calmZone(P, P.aligned ? ["before", "after"] : ["before"], [[S.t, S.t + h], [1920 - S.b - 40 - h, 1920 - S.b - 40]]);
+  if (zz === 1) e.style.top = (1920 - S.b - 40 - h) + "px";
   e.style.display = dd;
   window.HOOK_ZONE = zz;
   $("scrim").classList.toggle("low", zz === 1);   // text low: deeper bottom scrim

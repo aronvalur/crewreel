@@ -59,6 +59,7 @@ export default function NewReel() {
   const [files, setFiles] = useState<Record<string, File | undefined>>({});
   const [text, setText] = useState<Record<string, string>>({});
   const [title, setTitle] = useState("");
+  const [feed, setFeed] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState("");
   const tpl = TEMPLATES.find(t => t.id === tplId)!;
@@ -108,7 +109,7 @@ export default function NewReel() {
       }
       const r = await fetch("/api/jobs", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ draft: id, template: tpl.id, title, fields: text }),
+        body: JSON.stringify({ draft: id, template: tpl.id, title, fields: text, feed }),
       });
       const body = await r.json().catch(() => ({}));
       if (r.status !== 201) throw new Error(body.error || "Couldn't start the render. Try again.");
@@ -171,6 +172,10 @@ export default function NewReel() {
       </section>
 
       <section className="section stack">
+        <label className="check">
+          <input type="checkbox" checked={feed} onChange={e => setFeed(e.target.checked)} />
+          <span><b>Also make a 4:5 feed version</b><small className="muted">For Facebook and Instagram feed posts. Adds about 2 minutes.</small></span>
+        </label>
         {error && <p className="error" role="alert">{error}</p>}
         {progress !== null ? (
           <div className="stack">

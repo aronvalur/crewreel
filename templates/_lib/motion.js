@@ -72,6 +72,15 @@ window.M = (() => {
   const focusAt = (P, i, fallback) => ((P.focus || [])[i]) || fallback;
   // Seconds a viewer needs to read a line: 0.9 s + 0.28 s per word, at least 2.2 s.
   const readTime = text => Math.max(2.2, .9 + .28 * String(text).trim().split(/\s+/).length);
+  // Text safe zones per output frame. 'reel' (9:16): clear of the IG/TikTok UI. 'feed' (4:5): the renderer
+  // crops y 285..1635, so text keeps ~70 px inside that band. Sets --st/--sb for CSS, returns {t, b} in px.
+  const FEED_Y0 = 285, FEED_Y1 = 1635;
+  const safe = P => {
+    const s = P.frame === 'feed' ? { t: FEED_Y0 + 70, b: 1920 - FEED_Y1 + 80 } : { t: 330, b: 600 };
+    document.documentElement.style.setProperty('--st', s.t + 'px');
+    document.documentElement.style.setProperty('--sb', s.b + 'px');
+    return s;
+  };
   const activity = (P, names) => names.map(n => (P.activity || {})[n] && P.activity[n].profile);
-  return { quietZone, calmZone, focusAt, activity, readTime, clamp, outCubic, outExpo, inOutCubic, inOutSine, prog, lerp, $, esc, words, riseWords, show };
+  return { safe, FEED_Y0, FEED_Y1, quietZone, calmZone, focusAt, activity, readTime, clamp, outCubic, outExpo, inOutCubic, inOutSine, prog, lerp, $, esc, words, riseWords, show };
 })();

@@ -179,3 +179,7 @@ input[type=email], input[type=tel] { width: 100%; font: inherit; color: inherit;
 .cam-rec.on i { inset: 28px; border-radius: 8px; }
 .cam-time { justify-self: end; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 15px; opacity: .9; }
 .cam-time.ok { color: #6be38f; }
+label.check { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; }
+label.check input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--ink); flex: none; }
+label.check b { display: block; font-weight: 600; }
+label.check small { display: block; font-size: 14px; }

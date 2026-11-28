@@ -8,12 +8,12 @@
 <style>
   #sweep{position:absolute;top:0;bottom:0;width:520px;margin-left:-260px;
     background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.55) 50%,rgba(255,255,255,0));mix-blend-mode:screen}
-  #label{position:absolute;left:80px;bottom:600px;font-weight:650;font-size:30px;letter-spacing:5px;text-transform:uppercase;
+  #label{position:absolute;left:80px;bottom:var(--sb);font-weight:650;font-size:30px;letter-spacing:5px;text-transform:uppercase;
     padding:14px 22px 13px;border-radius:12px;background:rgba(12,14,16,.5);backdrop-filter:blur(12px)}
-  #big{position:absolute;left:80px;right:80px;top:330px;font-weight:700;font-size:92px;line-height:1.02;letter-spacing:-3px;
+  #big{position:absolute;left:80px;right:80px;top:var(--st);font-weight:700;font-size:92px;line-height:1.02;letter-spacing:-3px;
     text-shadow:0 2px 40px rgba(0,0,0,.45),0 2px 6px rgba(0,0,0,.35)}
   .plate .v{text-wrap:balance}
-  #step{position:absolute;right:80px;top:330px;font-weight:650;font-size:30px;letter-spacing:4px;color:rgba(255,255,255,.85)}
+  #step{position:absolute;right:80px;top:var(--st);font-weight:650;font-size:30px;letter-spacing:4px;color:rgba(255,255,255,.85)}
 </style>
 </head>
 <body>
@@ -47,6 +47,7 @@ const T = { hook: 2.5, a1: 4.6, a2: 6.8, action: 9.0, sweep: 14.0, d1: 15.5, det
 window.META = { fps: 30, duration: T.total, sources: ["before", "after", "action1", "action2", "action3"],
   cuts: [T.hook, T.a1, T.a2, T.action, T.sweep, T.d1, T.details], impacts: [T.action + 1.6], vo: P.vo };
 document.documentElement.style.setProperty("--accent", P.accent);
+const S = M.safe(P);                     // text safe zones: reel (IG/TikTok UI) or 4:5 feed crop
 const { $, prog, outExpo, inOutCubic, inOutSine, clamp, show } = M;
 const hookWords = M.words($("hook"), P.hook);
 const bigWords = M.words($("big"), P.result);
@@ -59,16 +60,16 @@ window.relayout = () => {                // re-run after web fonts load (overlay
   const el = $("plate"), d = el.style.display;
   el.style.display = "block"; el.style.top = ""; el.style.bottom = "";
   const ph = el.offsetHeight;
-  const z = M.quietZone(M.activity(P, ["action1", "action2", "action3"]), [[400, 400 + ph], [1920 - 600 - ph, 1920 - 600]]);
-  if (z === 0) { el.style.bottom = "auto"; el.style.top = "400px"; }
+  const z = M.quietZone(M.activity(P, ["action1", "action2", "action3"]), [[S.t + 70, S.t + 70 + ph], [1920 - S.b - ph, 1920 - S.b]]);
+  if (z === 0) { el.style.bottom = "auto"; el.style.top = (S.t + 70) + "px"; }
   el.style.display = d;
   window.PLATE_ZONE = z;
   // hook and result line sit over the calmest band of their shot (not over windows/doors)
   for (const [id, srcs] of [["hook", P.aligned ? ["before", "after"] : ["before"]], ["big", ["after"]]]) {
     const e = $(id), dd = e.style.display;
     e.style.display = "block"; e.style.top = "";
-    const h = e.offsetHeight, zz = M.calmZone(P, srcs, [[330, 330 + h], [1920 - 640 - h, 1920 - 640]]);
-    if (zz === 1) e.style.top = (1920 - 640 - h) + "px";
+    const h = e.offsetHeight, zz = M.calmZone(P, srcs, [[S.t, S.t + h], [1920 - S.b - 40 - h, 1920 - S.b - 40]]);
+    if (zz === 1) e.style.top = (1920 - S.b - 40 - h) + "px";
     e.style.display = dd;
     window[id.toUpperCase() + "_ZONE"] = zz;
   }  $("scrim").classList.toggle("low", window.HOOK_ZONE === 1 || window.BIG_ZONE === 1);   // text low: deeper bottom scrim

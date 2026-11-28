@@ -25,6 +25,7 @@ export type Job = {
   startedAt?: string;
   finishedAt?: string;
   hints?: Record<string, Hint[]>;     // slot -> re-shoot hints from ingest
+  feed?: boolean;                     // also render a 4:5 feed version (feed.mp4)
 };
 
 export type Profile = {

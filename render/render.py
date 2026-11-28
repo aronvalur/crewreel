@@ -198,9 +198,13 @@ def render_layer(L, clips):
     return img, a
 
 
-def composite(frames_dir, plan, clips, out_path, fps):
+FEED_BAND = (285, 1635)   # 4:5 crop of the 9:16 canvas; templates keep text inside it (motion.js M.safe)
+
+
+def composite(frames_dir, plan, clips, out_path, fps, frame="reel"):
+    crop = ["-vf", f"crop={W}:{FEED_BAND[1] - FEED_BAND[0]}:0:{FEED_BAND[0]}"] if frame == "feed" else []
     enc = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24",
-                            "-s", f"{W}x{H}", "-r", str(fps), "-i", "-", "-c:v", "libx264", "-preset", "medium",
+                            "-s", f"{W}x{H}", "-r", str(fps), "-i", "-", *crop, "-c:v", "libx264", "-preset", "medium",
                             "-crf", "17", "-pix_fmt", "yuv420p", out_path], stdin=subprocess.PIPE)
     ov_idx, ov = None, None
     for i, fp in enumerate(plan["frames"]):
@@ -260,12 +264,15 @@ def main():
     ap.add_argument("--params", default=None)
     ap.add_argument("--seconds", type=float, default=None)
     ap.add_argument("--keep", action="store_true")
+    ap.add_argument("--frame", choices=["reel", "feed"], default="reel",
+                    help="reel = 1080x1920 (Reels/TikTok/Shorts); feed = 1080x1350 (4:5 feed post, layout re-flowed, not just cropped)")
     ap.add_argument("--vo-take", default=None, help="one VO recording holding every template line, split on pauses")
     args = ap.parse_args()
     t0 = time.time()
     os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
     work = tempfile.mkdtemp(prefix="crewreel-")
     params = json.load(open(args.params)) if args.params else {}
+    params["frame"] = args.frame
 
     # 0. ingest: every upload -> clean 1080x1920 SDR mezzanine
     mezz = os.path.join(work, "mezz")
@@ -360,7 +367,7 @@ def main():
                 print(f"{name}: clip is {have:.1f}s, slot needs {needed_seconds(plan, name):.1f}s -> {speed:.2f}x slow motion")
         clips[name] = Clip(p, fps, warp, zoom, speed, stab)
     silent = os.path.join(work, "silent.mp4")
-    composite(work, plan, clips, silent, fps)
+    composite(work, plan, clips, silent, fps, args.frame)
     print(f"composite done at {time.time() - t0:.0f}s")
 
     # 4. audio

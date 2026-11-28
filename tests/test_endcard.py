@@ -59,3 +59,36 @@ def test_end_card_layout_fits_safe_zones_and_long_names():
         assert r["lines"] <= 2, (tpl, r)
         assert r["over"] <= 1, f"{tpl}: business name overflows ({r['over']} px)"
         assert r["kinds"] == ["bg", "shadow", "before", "after"], r["kinds"]
+
+
+def test_feed_frame_keeps_every_text_inside_the_4x5_crop():
+    """frame=feed: hook, byline, plates, captions and the whole end card sit inside y 285..1635."""
+    js = """
+    const { chromium } = require('playwright');
+    (async () => {
+      const [tpl] = JSON.parse(process.argv.at(-1));
+      const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1080, height: 1920 } });
+      await p.addInitScript(() => { window.PARAMS = { frame: 'feed', aligned: true, business: 'Golden Exterior Care' }; });
+      await p.goto('file://' + tpl);
+      await p.evaluate(async () => { await document.fonts.ready; window.relayout && window.relayout(); });
+      const r = await p.evaluate(() => {
+        const out = [];
+        for (let t = 0; t < META.duration; t += .25) {
+          seek(t);
+          for (const el of document.querySelectorAll('body *')) {
+            if (!el.childElementCount && el.textContent.trim()) {
+              const s = getComputedStyle(el), r = el.getBoundingClientRect();
+              let vis = r.height > 0 && s.visibility !== 'hidden';
+              for (let a = el; a && vis; a = a.parentElement) if (getComputedStyle(a).display === 'none' || +getComputedStyle(a).opacity < .05) vis = false;
+              if (vis && (r.top < 285 || r.bottom > 1635)) out.push([t, el.className || el.id || el.parentElement.className, Math.round(r.top), Math.round(r.bottom)]);
+            }
+          }
+        }
+        return out;
+      });
+      console.log(JSON.stringify(r)); await b.close();
+    })();"""
+    for tpl in ("driveway", "house-wash", "roof", "windows"):
+        arg = json.dumps([f"{ROOT}/templates/{tpl}/index.html"])
+        out = json.loads(subprocess.run(["node", "-e", js, arg], capture_output=True, text=True, check=True, cwd=ROOT).stdout)
+        assert out == [], f"{tpl}: text outside the feed crop: {out[:5]}"

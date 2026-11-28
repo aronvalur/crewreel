@@ -126,6 +126,14 @@ def render(job):
         return update(status="failed", error=msg, finishedAt=now())
 
     make_poster(out, job["template"], os.path.join(d, "poster.jpg"))
+    if job.get("feed"):
+        # 4:5 feed post: same job, text re-flowed for the feed crop. Optional extra; the reel stands on its own.
+        update(stage="Making the 4:5 feed version")
+        feed = os.path.join(d, "feed.mp4")
+        with open(os.path.join(d, "render-feed.log"), "w") as flog:
+            r = subprocess.run([*cmd[:4], feed, *cmd[5:], "--frame", "feed"], stdout=flog, stderr=flog)
+        if r.returncode != 0 and os.path.exists(feed):
+            os.remove(feed)
     return update(status="done", stage=None, hints=hints_for(out), finishedAt=now())
 
 

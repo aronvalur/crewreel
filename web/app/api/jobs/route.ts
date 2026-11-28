@@ -43,6 +43,6 @@ export async function POST(req: Request) {
     if (v) params[fld.name] = v;
   }
   const title = String(body.title || "").trim().slice(0, 60) || tpl.title;
-  await saveJob({ ...job, createdAt: new Date().toISOString(), template: tpl.id, title, status: "queued", params, files });
+  await saveJob({ ...job, createdAt: new Date().toISOString(), template: tpl.id, title, status: "queued", params, files, feed: body.feed === true });
   return NextResponse.json({ id: job.id }, { status: 201 });
 }

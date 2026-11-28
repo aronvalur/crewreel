@@ -9,11 +9,11 @@
   /* the rinse line: a soft bright band riding the wipe edge, like water sheeting down the roof */
   #rinse{position:absolute;left:0;right:0;height:300px;margin-top:-150px;
     background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.42) 50%,rgba(255,255,255,0));mix-blend-mode:screen}
-  #big{position:absolute;left:80px;right:80px;top:330px;font-weight:700;font-size:92px;line-height:1.02;letter-spacing:-3px;
+  #big{position:absolute;left:80px;right:80px;top:var(--st);font-weight:700;font-size:92px;line-height:1.02;letter-spacing:-3px;
     text-shadow:0 2px 40px rgba(0,0,0,.45),0 2px 6px rgba(0,0,0,.35)}
   .chip{position:absolute;left:80px;font-weight:650;font-size:30px;letter-spacing:5px;text-transform:uppercase;
     padding:14px 22px 13px;border-radius:12px;background:rgba(12,14,16,.5);backdrop-filter:blur(12px)}
-  #tagA{top:330px} #tagB{bottom:600px} #label{bottom:600px}
+  #tagA{top:var(--st)} #tagB{bottom:var(--sb)} #label{bottom:var(--sb)}
 </style>
 </head>
 <body>
@@ -48,6 +48,7 @@ window.META = { fps: 30, duration: T.total, sources: ["before", "after", "action
   cuts: [T.hook, T.a1, T.action, T.reveal, T.close], impacts: [W1 - .1], vo: P.vo,
   sfx: [{ at: W0 - .1, dur: W1 - W0 + .4, kind: "rinse" }].concat(P.aligned && (P.focus || []).length ? [{ at: T.reveal + .2, dur: 1.0, kind: "rinse" }] : []) };
 document.documentElement.style.setProperty("--accent", P.accent);
+const S = M.safe(P);                     // text safe zones: reel (IG/TikTok UI) or 4:5 feed crop
 const { $, prog, outExpo, inOutCubic, inOutSine, clamp, show } = M;
 const hookWords = M.words($("hook"), P.hook);
 const bigWords = M.words($("big"), P.result);
@@ -62,16 +63,16 @@ window.relayout = () => {                // re-run after web fonts load (overlay
   const el = $("plate"), d = el.style.display;
   el.style.display = "block"; el.style.top = ""; el.style.bottom = "";
   const ph = el.offsetHeight;
-  const z = M.quietZone(M.activity(P, ["action1", "action2"]), [[330, 330 + ph], [1920 - 600 - ph, 1920 - 600]]);
-  if (z === 0) { el.style.bottom = "auto"; el.style.top = "330px"; }
+  const z = M.quietZone(M.activity(P, ["action1", "action2"]), [[S.t, S.t + ph], [1920 - S.b - ph, 1920 - S.b]]);
+  if (z === 0) { el.style.bottom = "auto"; el.style.top = S.t + "px"; }
   el.style.display = d;
   window.PLATE_ZONE = z;
   // hook and result line over the calmest band (sky or plain shingles, not the dormer or the gutter line)
   for (const [id, srcs] of [["hook", P.aligned ? ["before", "after"] : ["before"]], ["big", ["after"]]]) {
     const e = $(id), dd = e.style.display;
     e.style.display = "block"; e.style.top = "";
-    const h = e.offsetHeight, zz = M.calmZone(P, srcs, [[330, 330 + h], [1920 - 640 - h, 1920 - 640]]);
-    if (zz === 1) e.style.top = (1920 - 640 - h) + "px";
+    const h = e.offsetHeight, zz = M.calmZone(P, srcs, [[S.t, S.t + h], [1920 - S.b - 40 - h, 1920 - S.b - 40]]);
+    if (zz === 1) e.style.top = (1920 - S.b - 40 - h) + "px";
     e.style.display = dd;
     window[id.toUpperCase() + "_ZONE"] = zz;
   }
@@ -134,7 +135,7 @@ window.seek = function (t) {
   // tags: BEFORE (low) until the rinse reaches it, AFTER (top) once the rinse has passed it
   const inRev = t >= T.action && t < T.reveal;
   const tagK = inRev ? outExpo((t - T.action - .15) / .45) : 0;
-  const bTop = 1920 - 600 - 60, aBottom = 330 + 60;
+  const bTop = 1920 - S.b - 60, aBottom = S.t + 60;
   const y = wipeY === null ? (P.aligned ? 2 : -1) : wipeY * 1920;
   const fade = P.aligned ? 1 : inOutSine(prog(t, W0, W1));
   $("tagB").style.opacity = tagK * (P.aligned ? clamp((bTop - y) / 60) : 1 - fade) * (1 - prog(t, W1, W1 + .3));
