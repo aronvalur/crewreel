@@ -52,7 +52,8 @@ const P = Object.assign({
 const T = { hook: 2.6, a1: 5.0, action: 7.4, reveal: 11.8, close: 13.4, total: 16.4 };
 const W0 = T.action + .45, W1 = T.action + 1.75;        // the squeegee pull: quick and crisp
 window.META = { fps: 30, duration: T.total, sources: ["before", "after", "action1", "action2"],
-  cuts: [T.hook, T.a1, T.action, T.reveal, T.close], impacts: [W1 - .05], vo: P.vo };
+  cuts: [T.hook, T.a1, T.action, T.reveal, T.close], impacts: [W1 - .05], vo: P.vo,
+  sfx: [{ at: W0, dur: W1 - W0, kind: "squeegee" }].concat(P.aligned && (P.focus || []).length ? [{ at: T.reveal + .2, dur: .75, kind: "squeegee" }] : []) };
 document.documentElement.style.setProperty("--accent", P.accent);
 const { $, prog, outExpo, inOutCubic, inOutSine, clamp, show } = M;
 const hookWords = M.words($("hook"), P.hook);

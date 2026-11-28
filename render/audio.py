@@ -74,12 +74,49 @@ def whoosh(dur=.55):
         acc += a * (x[i] - acc)
         y[i] = acc
     y -= np.convolve(y, np.ones(64) / 64, "same")  # remove rumble
+    y = _band(y, 120, 4500)                         # no fizz above ~5 kHz: air, not hiss
     return .5 * y * np.sin(np.pi * t) ** 1.5
 
 
 def thump():
     t = np.arange(int(.6 * SR)) / SR
     return .35 * np.sin(2 * np.pi * (45 + 40 * np.exp(-t * 20)) * t) * np.exp(-t * 6)
+
+
+def _band(x, lo, hi):
+    """Band-limit noise with a soft-edged FFT mask (no scipy needed)."""
+    X = np.fft.rfft(x)
+    f = np.fft.rfftfreq(len(x), 1 / SR)
+    m = 1 / (1 + (lo / np.maximum(f, 1)) ** 4) / (1 + (f / hi) ** 4)
+    return np.fft.irfft(X * m, len(x))
+
+
+def squeegee(dur=1.3):
+    """A squeegee pulled across glass: a bright wet swish that builds, a faint rubber squeak riding it,
+    and a crisp stop where the blade leaves the glass."""
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    k = t / dur
+    swish = _band(rng.standard_normal(n), 1800, 7000) * (k ** 1.4) * np.minimum(1, (dur - t) / .03)
+    f = 950 + 380 * k + 25 * np.sin(2 * np.pi * 7 * t)                   # rubber chatter: slight vibrato
+    squeak = np.sin(2 * np.pi * np.cumsum(f) / SR) * .22 * np.sin(np.pi * k) ** 2 * (.6 + .4 * np.sin(2 * np.pi * 13 * t))
+    y = swish / (np.abs(swish).max() + 1e-9) + squeak
+    return .5 * y / (np.abs(y).max() + 1e-9)
+
+
+def rinse(dur=1.9):
+    """Water sheeting down a roof: soft, low-passed hiss that swells and settles."""
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    k = t / dur
+    x = _band(rng.standard_normal(n), 250, 3200)
+    x *= 1 + .25 * np.sin(2 * np.pi * 3.1 * t) * np.sin(2 * np.pi * .7 * t)   # gentle surging
+    env = np.sin(np.pi * np.minimum(1, k * 1.15)) ** .7 * np.minimum(1, (dur - t) / .25)
+    y = x * env
+    return .45 * y / (np.abs(y).max() + 1e-9)
+
+
+SFX = {"squeegee": squeegee, "rinse": rinse}
 
 
 def add(buf, clip, at):
@@ -231,7 +268,7 @@ def take_timing(take_path, lines):
 VO_DB = -18.0          # speech RMS before final loudness normalisation
 BED_DB = -26.0         # music RMS when nobody is talking
 DUCK_DB = -8.0         # extra music reduction under the voice (-> ~16 dB below VO)
-FX_PEAK_DB = -12.0     # whoosh / thump peaks
+FX_PEAK_DB = -14.0     # whoosh / thump peaks (momentary ~6 dB under the voice: felt, not heard)
 
 
 def _db(x):
@@ -282,6 +319,11 @@ def mix_stems(meta, work, vo_clips=None):
     for c in meta.get("impacts", []):
         if 0 < c < dur:
             add(fx, thump(), c)
+    # template-specific foley that matches the reveal (meta['sfx'] = [{at, dur, kind}]), kept under the
+    # whooshes: it should be felt more than heard
+    for e in meta.get("sfx", []):
+        if e.get("kind") in SFX and 0 <= e["at"] < dur:
+            add(fx, .55 * SFX[e["kind"]](max(.3, float(e.get("dur", 1.2)))), e["at"])
     vo = np.zeros_like(music)
     if vo_clips:                                   # pre-rendered take, already split per line
         for line, clip in zip(meta.get("vo", []), vo_clips):

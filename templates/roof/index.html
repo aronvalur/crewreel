@@ -44,7 +44,8 @@ const P = Object.assign({
 const T = { hook: 2.8, a1: 5.4, action: 8.0, reveal: 13.0, close: 15.0, total: 18.0 };
 const W0 = T.action + .5, W1 = T.action + 2.4;          // rinse wipe runs ridge -> gutter
 window.META = { fps: 30, duration: T.total, sources: ["before", "after", "action1", "action2"],
-  cuts: [T.hook, T.a1, T.action, T.reveal, T.close], impacts: [W1 - .1], vo: P.vo };
+  cuts: [T.hook, T.a1, T.action, T.reveal, T.close], impacts: [W1 - .1], vo: P.vo,
+  sfx: [{ at: W0 - .1, dur: W1 - W0 + .4, kind: "rinse" }].concat(P.aligned && (P.focus || []).length ? [{ at: T.reveal + .2, dur: 1.0, kind: "rinse" }] : []) };
 document.documentElement.style.setProperty("--accent", P.accent);
 const { $, prog, outExpo, inOutCubic, inOutSine, clamp, show } = M;
 const hookWords = M.words($("hook"), P.hook);

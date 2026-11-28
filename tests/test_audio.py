@@ -52,3 +52,19 @@ def test_real_take_timing_and_mix_balance(tmp_path):
     I = float([l.split()[1] for l in r.splitlines() if l.strip().startswith("I:")][-1])
     peak = float([l.split()[1] for l in r.splitlines() if l.strip().startswith("Peak:")][-1])
     assert abs(I + 14) < .6 and peak < -1.4
+
+
+def test_reveal_foley_lands_on_its_wipe_and_stays_under_the_whooshes(tmp_path):
+    """meta['sfx'] puts the squeegee / rinse sound exactly over the reveal; it is subtle (peak below the cut
+    whoosh) and the squeegee stops crisply when the blade leaves the glass."""
+    meta = {"duration": 6.0, "cuts": [1.0], "impacts": [], "vo": [],
+            "sfx": [{"at": 2.0, "dur": 1.3, "kind": "squeegee"}, {"at": 4.0, "dur": 1.5, "kind": "rinse"}, {"at": 5, "kind": "nope"}]}
+    _, fx, _ = audio.mix_stems(meta, str(tmp_path))
+    SR = audio.SR
+    seg = lambda a, b: np.abs(fx[int(a * SR):int(b * SR)])
+    assert seg(2.2, 3.2).max() > 5 * seg(1.5, 1.9).max() + 1e-6        # nothing before, sound during
+    assert seg(4.3, 5.2).max() > 0
+    assert seg(2.0, 3.3).max() < seg(.6, 1.0).max()                    # whoosh stays the loudest fx
+    s, SR = audio.squeegee(1.3), audio.SR
+    tail, body = np.abs(s[-int(.01 * SR):]).max(), np.abs(s[int(.9 * SR):int(1.25 * SR)]).max()
+    assert body > .2 and tail < body                                   # builds, then a crisp stop
