@@ -101,3 +101,34 @@ def test_files_route_only_serves_outputs(server):
     assert get(base, "/api/files/20261126-deadbeef/job.json") == 404
     assert get(base, "/api/files/..%2F..%2Fetc/reel.mp4") == 404
     assert get(base, "/api/jobs/..%2Fprofile") == 404
+
+
+def leads(data):
+    d = data / "leads"
+    return [json.loads(p.read_text()) for p in sorted(d.glob("*.json"))] if d.exists() else []
+
+
+def test_quote_request_is_stored_and_credited_to_the_reel(server):
+    base, data = server
+    jid = draft(base)                                                  # any existing job id counts as a reel ref
+    before = len(leads(data))
+    code, _ = call(base, "POST", "/api/leads", {"name": "  Sigga  ", "contact": "+354 555 1234", "address": "Laugavegur 1",
+                                                "services": ["Roof", "Hot tub"], "message": "Moss on the north side", "ref": jid})
+    assert code == 201
+    assert len(leads(data)) == before + 1
+    l = next(x for x in leads(data) if x["name"] == "Sigga")
+    assert l["name"] == "Sigga" and l["services"] == ["Roof"] and l["ref"] == jid and not l.get("seen")
+    # unknown reel ids are dropped, not trusted
+    assert call(base, "POST", "/api/leads", {"name": "Anna", "contact": "a@b.is", "ref": "20990101-ffffffff"})[0] == 201
+    assert next(x for x in leads(data) if x["name"] == "Anna").get("ref") is None
+
+
+def test_quote_request_needs_a_way_to_reply_and_drops_bots(server):
+    base, data = server
+    n = len(leads(data))
+    code, body = call(base, "POST", "/api/leads", {"name": "Jón", "contact": "12"})
+    assert code == 400 and "phone number or email" in body["error"]
+    assert call(base, "POST", "/api/leads", {"name": "", "contact": "a@b.is"})[1]["error"] == "Add your name."
+    assert call(base, "POST", "/api/leads", {"name": "Bot", "contact": "a@b.is", "website": "http://spam"})[0] == 201
+    assert len(leads(data)) == n                                       # honeypot: looks accepted, nothing stored
+    assert get(base, "/q") == 200 and get(base, "/quotes") == 200

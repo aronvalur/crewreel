@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getProfile, saveProfile } from "@/lib/store";
+import { quoteLink } from "@/lib/leads";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export default async function Settings() {
       </label>
       <label className="field"><span>Quote link</span>
         <input type="text" name="url" defaultValue={p.url} placeholder="valurcleaning.com/quote" maxLength={60} />
-        <small>Where people go to ask for a quote. Shown as text on the reel.</small>
+        <small>Leave blank to use your Crewreel quote page ({quoteLink("")}): requests land under Quotes and show which reel sent them.</small>
       </label>
       <label className="field"><span>Call to action</span>
         <input type="text" name="cta" defaultValue={p.cta} maxLength={32} />

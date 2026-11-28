@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -9,20 +8,11 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
+// Bare shell: the contractor app (app/(app)) adds its own header; the public quote page (app/q) has none.
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
-        <header className="top">
-          <div className="wrap">
-            <Link href="/" className="brand">Crewreel</Link>
-            <Link href="/" className="nav">Reels</Link>
-            <Link href="/settings" className="nav">Business</Link>
-            <Link href="/jobs/new" className="btn sm">New reel</Link>
-          </div>
-        </header>
-        <main className="wrap">{children}</main>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

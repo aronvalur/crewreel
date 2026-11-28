@@ -73,7 +73,7 @@ def build_params(job):
         "business": business,
         "initials": "".join(w[0] for w in business.split()[:2]).upper() or "C",
         "area": prof.get("area", ""),
-        "url": prof.get("url") or "your-site.com/quote",
+        "url": prof.get("url") or os.environ.get("CREWREEL_PUBLIC_HOST", "crewreel.app").split("://")[-1].rstrip("/") + "/q",
         "accent": prof.get("accent") or "#7FD1FF",
         "cta": prof.get("cta") or "Get a free quote",
     }
